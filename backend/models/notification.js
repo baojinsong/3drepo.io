@@ -19,6 +19,7 @@
 const { hasWriteAccessToModelHelper, hasReadAccessToModelHelper } = require("../middlewares/checkPermissions");
 const modelSettings = require("../models/modelSetting");
 const job = require("./job");
+const issue = require("./issue");
 const utils = require("../utils");
 const uuid = require("node-uuid");
 const db = require("../handler/db");
@@ -27,6 +28,7 @@ const User = require("./user");
 
 const types = {
 	ISSUE_ASSIGNED : "ISSUE_ASSIGNED",
+	ISSUE_CLOSED : "ISSUE_CLOSED",
 	ISSUE_CREATED : "ISSUE_CREATED",
 	MODEL_UPDATED : "MODEL_UPDATED",
 	MODEL_UPDATED_FAILED : "MODEL_UPDATED_FAILED"
@@ -110,7 +112,13 @@ module.exports = {
 		});
 	},
 
-	upsertIssueAssignedtNotification: function(username, teamSpace, modelId, issueId) {
+	upsertIssueClosedNotification: function (username, teamSpace, modelId, issueId) {
+		const criteria = { teamSpace, modelId };
+		const data = { issuesId: [issueId] };
+		return this.upsertNotification(username, data, types.ISSUE_CLOSED, criteria);
+	},
+
+	upsertIssueAssignedNotification: function(username, teamSpace, modelId, issueId) {
 		const criteria = {teamSpace,  modelId};
 		const data = {issuesId: [issueId] };
 		return this.upsertNotification(username,data,types.ISSUE_ASSIGNED,criteria);
@@ -156,6 +164,36 @@ module.exports = {
 			.then(c => c.deleteMany({}));
 	},
 
+	upsertIssueClosedNotifications: function (username, teamSpace, modelId, issues) {
+		// find user assigned 
+		const rolesKey = 'assigned_roles';
+		let assignedRoles = [];
+		let assignedUsers = [];
+
+		const comments = issues.comments;
+		
+		for (let item in comments) {
+			if (comments[item].action.property === rolesKey) {
+				assignedRoles.push(comments[item].action.to);
+				assignedRoles.push(comments[item].action.from);
+			}
+		}
+			assignedRoles = _.uniq(assignedRoles);
+			return job.findByJobs(teamSpace, assignedRoles)
+				.then(response => {
+					return Promise.all(
+						response
+						.map(u => this.upsertIssueClosedNotification(u, teamSpace, modelId, issue._id))
+						.then(n => console.log({ username: u, notification: n }))
+					)
+		});
+	},
+	
+	// 	.then(assignedUsers => {
+	// 		return assignedUsers.map(u => this.upsertIssueClosedNotification(u, teamSpace, modelId, issue._id))
+	// 	}).then(n => ({ username: u, notification: n }))
+	// },
+
 	/**
 	 * This function is used for upserting the assign issue notifications.
 	 * When someone (username) asigns an issue to a new role this function should be
@@ -176,7 +214,11 @@ module.exports = {
 					return [];
 				}
 
+				// console.log('rs from', rs);
+
 				const users = rs.users.filter(m => m !== username); // Leave out the user that is assigning the issue
+
+				// console.log('users', users);
 
 				// For all the users with that assigned job we need
 				// to find those that can modify the model
@@ -189,7 +231,8 @@ module.exports = {
 			.then((users) => {
 				const assignedUsers = users.filter(u => u.canWrite).map(u=> u.user);
 				return Promise.all(
-					assignedUsers.map(u => this.upsertIssueAssignedtNotification(u, teamSpace, modelId, issue._id).then(n=>({username:u, notification:n})))
+					assignedUsers.map(u => this.upsertIssueAssignedNotification(u, teamSpace, modelId, issue._id)
+					.then(n=>({username:u, notification:n})))
 				).then(usersNotifications => {
 					return fillModelNames(usersNotifications.map(un => un.notification)).then(()=> usersNotifications);
 				});

@@ -44,6 +44,7 @@ export interface INotification {
 
 const TYPES = {
 	ISSUE_ASSIGNED : 'ISSUE_ASSIGNED',
+	ISSUE_CLOSED : 'ISSUE_CLOSED',
 	MODEL_UPDATED : 'MODEL_UPDATED',
 	MODEL_UPDATED_FAILED : 'MODEL_UPDATED_FAILED'
 };
@@ -91,6 +92,7 @@ const getIcon = (notification) => {
 		case TYPES.ISSUE_ASSIGNED:
 			return (<Place/>);
 		case TYPES.MODEL_UPDATED:
+		case TYPES.ISSUE_CLOSED:
 		case TYPES.MODEL_UPDATED_FAILED:
 			return (<ChangeHistory/>);
 	}
@@ -104,6 +106,8 @@ const getDetails = (notification: IProps) => {
 			return !notification.revision ? 'New revision uploaded' : `Revision ${notification.revision} uploaded`;
 		case TYPES.MODEL_UPDATED_FAILED:
 			return 'New revision failed to import';
+		case TYPES.ISSUE_CLOSED:
+			return 'Issue has been closed';
 	}
 };
 
