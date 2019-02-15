@@ -50,6 +50,7 @@ module.exports = {
 				notification.upsertIssueClosedNotifications(username, teamspace, modelId, issue)
 			]).
 			then((notifications) => {
+					notifications = _.flatten(notifications);
 					req.userNotifications = notifications;
 					next();
 				});

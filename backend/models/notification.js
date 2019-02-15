@@ -164,29 +164,33 @@ module.exports = {
 			.then(c => c.deleteMany({}));
 	},
 
-	upsertIssueClosedNotifications: function (username, teamSpace, modelId, issues) {
+	upsertIssueClosedNotifications: function (username, teamSpace, modelId, issue) {
 		// find user assigned 
 		const rolesKey = 'assigned_roles';
 		let assignedRoles = [];
-		let assignedUsers = [];
 
-		const comments = issues.comments;
+		const comments = issue.comments;
 		
 		for (let item in comments) {
 			if (comments[item].action.property === rolesKey) {
 				assignedRoles.push(comments[item].action.to);
-				assignedRoles.push(comments[item].action.from);
 			}
 		}
-			assignedRoles = _.uniq(assignedRoles);
-			return job.findByJobs(teamSpace, assignedRoles)
-				.then(response => {
-					return Promise.all(
-						response
-						.map(u => this.upsertIssueClosedNotification(u, teamSpace, modelId, issue._id))
-						.then(n => console.log({ username: u, notification: n }))
-					)
-		});
+
+		// remove nulls and empty strings too
+		assignedRoles = _(assignedRoles).uniq().compact().value;
+		// this has empty string in it 
+
+		const promises = job.findByJobs(teamSpace, assignedRoles)
+			.then(users => {
+				return Promise.all(users.map(u => {
+					return this.upsertIssueClosedNotification(u, teamSpace, modelId, issue._id)
+					.then((n) => {
+						return ({ username: u, notification: n });
+					})			
+				}))
+			});
+		return promises;
 	},
 	
 	// 	.then(assignedUsers => {
