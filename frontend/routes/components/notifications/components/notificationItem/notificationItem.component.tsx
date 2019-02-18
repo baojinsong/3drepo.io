@@ -99,6 +99,7 @@ const getIcon = (notification) => {
 };
 
 const getDetails = (notification: IProps) => {
+	console.log('notifiction from frontend', notification);
 	switch (notification.type) {
 		case TYPES.ISSUE_ASSIGNED:
 			return `${notification.issuesId.length} assigned issues `;
@@ -107,7 +108,7 @@ const getDetails = (notification: IProps) => {
 		case TYPES.MODEL_UPDATED_FAILED:
 			return 'New revision failed to import';
 		case TYPES.ISSUE_CLOSED:
-			return `${notification.issuesId.length} closed issue`;
+			return notification.issuesId.length ? `${notification.issuesId.length} closed issue` : 'Issue has been closed';
 	}
 };
 
@@ -125,6 +126,10 @@ export class NotificationItem extends React.PureComponent<IProps, IState> {
 		const {teamSpace, modelId, _id: notificationId, history} = this.props;
 		let pathname = `/viewer/${teamSpace}/${modelId}`;
 		let search = '';
+
+		if (this.props.type === TYPES.ISSUE_CLOSED) {
+			search = `?notificationId=${notificationId}`;
+		}
 
 		if (this.props.type === TYPES.ISSUE_ASSIGNED) {
 			search = `?notificationId=${notificationId}`;
