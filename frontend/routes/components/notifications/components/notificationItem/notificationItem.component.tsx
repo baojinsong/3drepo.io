@@ -107,7 +107,7 @@ const getDetails = (notification: IProps) => {
 		case TYPES.MODEL_UPDATED_FAILED:
 			return 'New revision failed to import';
 		case TYPES.ISSUE_CLOSED:
-			return 'Issue has been closed';
+			return !notification.issuesId.length ? 'Issue has been closed' : `${notification.issuesId.length} closed issues`;
 	}
 };
 
