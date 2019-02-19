@@ -164,7 +164,7 @@ module.exports = {
 			.then(c => c.deleteMany({}));
 	},
 
-	upsertIssueClosedNotifications: function (username, teamSpace, modelId, issue) {
+	upsertIssueClosedNotifications: async function (username, teamSpace, modelId, issue) {
 
 		const rolesKey = 'assigned_roles';
 		let assignedRoles = [];
@@ -183,21 +183,36 @@ module.exports = {
 		// remove dupliactes and empty strings
 		assignedRoles = _(assignedRoles).uniq().compact().value();
 
-		// TODO: think of better name.
-		const promises = job.findByJobs(teamSpace, assignedRoles)
-			.then(users => {
-				// make sure to notify the job owner. 
-				users.push(owner);
-				return Promise.all(users.map(u => {
-					return this.upsertIssueClosedNotification(u, teamSpace, modelId, issue._id)
-					.then((n) => {
-						return ({ username: u, notification: n });
-					}).then(usersNotifications => {
-						return fillModelNames(usersNotifications.map(un => un.notification)).then(() => usersNotifications);
-					});			
-				}))
-			});
-		return promises;
+		// Find users 
+		const users = await job.findByJobs(teamSpace, assignedRoles);
+	
+		const notifyUsers = await users.map(u => { this.upsertIssueClosedNotification(u, teamSpace, modelId, issue._id)});
+
+		const createNotifications = await {username: u, notification: notifyUsers };	
+
+		const modelNames = await fillModelNames(createNotifications.map(un => un.notification));
+
+		closedIssueNotifications = await usersNotifications;
+		
+		return closedIssueNotifications;
+
+		// // // TODO: think of better name.
+		// const promises = job.findByJobs(teamSpace, assignedRoles
+		// (1 *)
+		// .then(users => {
+		// 		// make sure to notify the job owner. 
+		// 		users.push(owner);
+		// return Promise.all(
+		// 	users.map(u => { return this.upsertIssueClosedNotification(u, teamSpace, modelId, issue._id)
+		// (2 *)	
+		// .then((n) => {return ({ username: u, notification: n });
+		
+		// (3 *)
+		// }).then(usersNotifications => { return fillModelNames(usersNotifications.map(un => un.notification)).then(() => usersNotifications);
+		// 			});			
+		// 		}))
+		// 	});
+		// return promises;
 	},
 
 	/**
