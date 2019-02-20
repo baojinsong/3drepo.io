@@ -128,10 +128,12 @@ export class NotificationItem extends React.PureComponent<IProps, IState> {
 		let search = '';
 
 		if (this.props.type === TYPES.ISSUE_CLOSED) {
+			console.log('closed notification id', notificationId);
 			search = `?notificationId=${notificationId}`;
 		}
 
 		if (this.props.type === TYPES.ISSUE_ASSIGNED) {
+			console.log('assigned', notificationId);
 			search = `?notificationId=${notificationId}`;
 		}
 

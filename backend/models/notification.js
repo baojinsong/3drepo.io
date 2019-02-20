@@ -183,36 +183,30 @@ module.exports = {
 		// remove dupliactes and empty strings
 		assignedRoles = _(assignedRoles).uniq().compact().value();
 
+		// const getUsers = await job.findByJobs(teamSpace, assignedRoles);
+
+		// const users = await getUsers.map(u => this.upsertIssueClosedNotification(u, teamSpace, modelId, issue._id));
+
+		// // await return a function with promises . 
+		// const createNotification = users.then(r => {
+		// 	console.log(r);
+		// })
+
+		// console.log('jobs and ting', createNotification)
+
+		// TODO: need of better name.
 		// Find users 
-		const users = await job.findByJobs(teamSpace, assignedRoles);
-	
-		const notifyUsers = await users.map(u => { this.upsertIssueClosedNotification(u, teamSpace, modelId, issue._id)});
-
-		const createNotifications = await {username: u, notification: notifyUsers };	
-
-		const modelNames = await fillModelNames(createNotifications.map(un => un.notification));
-
-		closedIssueNotifications = await usersNotifications;
-		
-		return closedIssueNotifications;
-
-		// // // TODO: think of better name.
-		// const promises = job.findByJobs(teamSpace, assignedRoles
-		// (1 *)
-		// .then(users => {
-		// 		// make sure to notify the job owner. 
-		// 		users.push(owner);
-		// return Promise.all(
-		// 	users.map(u => { return this.upsertIssueClosedNotification(u, teamSpace, modelId, issue._id)
-		// (2 *)	
-		// .then((n) => {return ({ username: u, notification: n });
-		
-		// (3 *)
-		// }).then(usersNotifications => { return fillModelNames(usersNotifications.map(un => un.notification)).then(() => usersNotifications);
-		// 			});			
-		// 		}))
-		// 	});
-		// return promises;
+		const promises = job.findByJobs(teamSpace, assignedRoles).then(users => {
+				// make sure to notify the job owner. 
+		users.push(owner);
+			
+		return Promise.all(
+			users.map(u => { return this.upsertIssueClosedNotification(u, teamSpace, modelId, issue._id)
+				
+				.then((n) => { return ({ username: u, notification: n }); })
+				})) // end all
+			});
+		return promises;
 	},
 
 	/**
@@ -236,11 +230,7 @@ module.exports = {
 					return [];
 				}
 
-				// console.log('rs from', rs);
-
 				const users = rs.users.filter(m => m !== username); // Leave out the user that is assigning the issue
-
-				// console.log('users', users);
 
 				// For all the users with that assigned job we need
 				// to find those that can modify the model

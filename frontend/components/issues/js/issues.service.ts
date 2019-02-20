@@ -264,7 +264,7 @@ export class IssuesService {
 		let filters = [];
 		const criteria = this.getCriteria(chips);
 
-		if (!criteria.status) { // If there is no explicit filter for status dont show closed issues
+		if (!criteria.status && !criteria.notification) { // If there is no explicit filter for status dont show closed issues
 									// thats the general criteria for showing issues.
 			filters.push((issue) => issue.status !== 'closed');
 		}
@@ -592,6 +592,8 @@ export class IssuesService {
 	}
 
 	public isOpen(issueData) {
+
+		
 		if (issueData) {
 			return issueData.status !== 'closed';
 		}

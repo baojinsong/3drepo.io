@@ -38,11 +38,13 @@ module.exports = {
 		if (issues.isIssueBeingClosed(oldIssue, issue)) {
 			notification.upsertIssueClosedNotifications(username, teamspace, modelId, issue).
 				then((notifications) => {
+					console.log('notifications', notifications);
 					req.userNotifications = notifications;
 					next();
 				});
 			return;
 		}
+		
 
 		if (!isCommentModification && issues.isIssueAssignment(oldIssue, issue)) {
 			Promise.all([

@@ -156,33 +156,55 @@ class IssuesListController implements ng.IController {
 			(issueToDisplay) => {
 				if (issueToDisplay) {
 					this.editIssue(issueToDisplay);
-				}
+			}
 			},
 			true
 		);
 	}
 
 	public filterByNotification(notificationId) {
+		console.log('one', notificationId);
+
 		if (notificationId) {
-			let chip: IChip = {
-				name: 'assignedIssues',
+			// let chip: IChip = {
+			// 	name: 'assignedIssues',
+			// 	nameType: 'Notification',
+			// 	value: [],
+			// 	type: 'notification'
+			// };
+
+			let closedChip: IChip = {
+				name: 'closedIssues',
 				nameType: 'Notification',
 				value: [],
 				type: 'notification'
 			};
 
-			this.filterChips = [chip];
+			// chip.value ? this.filterChips = [chip] : this.filterChips = [closedChip];
+			this.filterChips = [closedChip];
 
 			dispatch(NotificationsActions.sendUpdateNotificationRead(notificationId, true));
+
 			API.getNotification(notificationId).then((n) => {
-				chip = {
-					name: 'assignedIssues',
+
+				this.issuesService.state.issueDisplay.showClosed = true;
+
+				closedChip = {
+					name: 'closedIssues',
 					nameType: 'Notification',
 					value: n.data.issuesId,
 					type: 'notification'
 				};
 
-				this.filterChips = [chip];
+				// chip = {
+				// 	name: 'assignedIssues',
+				// 	nameType: 'Notification',
+				// 	value: n.data.issuesId,
+				// 	type: 'notification'
+				// };
+
+				this.filterChips = [closedChip]
+				// chip.value ? this.filterChips = [chip] : this.filterChips = [closedChip];
 			});
 		}
 	}
