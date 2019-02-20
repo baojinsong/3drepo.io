@@ -164,39 +164,56 @@ module.exports = {
 			.then(c => c.deleteMany({}));
 	},
 
-	upsertIssueClosedNotifications: function (username, teamSpace, modelId, issue) {
-		// find user assigned 
+	upsertIssueClosedNotifications: async function (username, teamSpace, modelId, issue) {
+
 		const rolesKey = 'assigned_roles';
 		let assignedRoles = [];
+		// Make sure we have the user who created the issue.
+		const owner = issue.owner;
 
 		const comments = issue.comments;
 		
 		for (let item in comments) {
 			if (comments[item].action.property === rolesKey) {
 				assignedRoles.push(comments[item].action.to);
+				assignedRoles.push(comments[item].action.from);
 			}
 		}
 
-		// remove nulls and empty strings too
-		assignedRoles = _(assignedRoles).uniq().compact().value;
-		// this has empty string in it 
+		// remove dupliactes and empty strings
+		assignedRoles = _(assignedRoles).uniq().compact().value();
 
-		const promises = job.findByJobs(teamSpace, assignedRoles)
-			.then(users => {
-				return Promise.all(users.map(u => {
-					return this.upsertIssueClosedNotification(u, teamSpace, modelId, issue._id)
-					.then((n) => {
-						return ({ username: u, notification: n });
-					})			
-				}))
-			});
-		return promises;
-	},
+		// Find users 
+		const users = await job.findByJobs(teamSpace, assignedRoles);
 	
-	// 	.then(assignedUsers => {
-	// 		return assignedUsers.map(u => this.upsertIssueClosedNotification(u, teamSpace, modelId, issue._id))
-	// 	}).then(n => ({ username: u, notification: n }))
-	// },
+		const notifyUsers = await users.map(u => { this.upsertIssueClosedNotification(u, teamSpace, modelId, issue._id)});
+
+		const createNotifications = await {username: u, notification: notifyUsers };	
+
+		const modelNames = await fillModelNames(createNotifications.map(un => un.notification));
+
+		closedIssueNotifications = await usersNotifications;
+		
+		return closedIssueNotifications;
+
+		// // // TODO: think of better name.
+		// const promises = job.findByJobs(teamSpace, assignedRoles
+		// (1 *)
+		// .then(users => {
+		// 		// make sure to notify the job owner. 
+		// 		users.push(owner);
+		// return Promise.all(
+		// 	users.map(u => { return this.upsertIssueClosedNotification(u, teamSpace, modelId, issue._id)
+		// (2 *)	
+		// .then((n) => {return ({ username: u, notification: n });
+		
+		// (3 *)
+		// }).then(usersNotifications => { return fillModelNames(usersNotifications.map(un => un.notification)).then(() => usersNotifications);
+		// 			});			
+		// 		}))
+		// 	});
+		// return promises;
+	},
 
 	/**
 	 * This function is used for upserting the assign issue notifications.
@@ -214,6 +231,7 @@ module.exports = {
 
 		return job.findByJob(teamSpace,assignedRole)
 			.then(rs => {
+
 				if (!rs || !rs.users) {
 					return [];
 				}

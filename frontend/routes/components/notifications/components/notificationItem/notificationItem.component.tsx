@@ -93,13 +93,13 @@ const getIcon = (notification) => {
 			return (<Place/>);
 		case TYPES.MODEL_UPDATED:
 		case TYPES.ISSUE_CLOSED:
+			return (<Place />);
 		case TYPES.MODEL_UPDATED_FAILED:
 			return (<ChangeHistory/>);
 	}
 };
 
 const getDetails = (notification: IProps) => {
-	console.log('notifiction from frontend', notification);
 	switch (notification.type) {
 		case TYPES.ISSUE_ASSIGNED:
 			return `${notification.issuesId.length} assigned issues `;
@@ -108,7 +108,7 @@ const getDetails = (notification: IProps) => {
 		case TYPES.MODEL_UPDATED_FAILED:
 			return 'New revision failed to import';
 		case TYPES.ISSUE_CLOSED:
-			return notification.issuesId.length ? `${notification.issuesId.length} closed issue` : 'Issue has been closed';
+			return notification.issuesId.length <= 1 ? 'Issue has been closed' : `${notification.issuesId.length} closed issues`;
 	}
 };
 
