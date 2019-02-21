@@ -164,49 +164,41 @@ module.exports = {
 			.then(c => c.deleteMany({}));
 	},
 
-	upsertIssueClosedNotifications: async function (username, teamSpace, modelId, issue) {
+	filterUsers: async function (users, teamSpace, modelId, issueId) {
+		return Promise.all(users.map(u => {
+			return this.upsertIssueClosedNotification(u, teamSpace, modelId, issueId)
+				.then((n) => {
+					return ({ username: u, notification: n });
+				})
+		}))
+	},
 
+	upsertIssueClosedNotifications: async function (username, teamSpace, modelId, issue) {
+		// find user assigned 
 		const rolesKey = 'assigned_roles';
 		let assignedRoles = [];
-		// Make sure we have the user who created the issue.
 		const owner = issue.owner;
 
 		const comments = issue.comments;
-		
+
 		for (let item in comments) {
 			if (comments[item].action.property === rolesKey) {
 				assignedRoles.push(comments[item].action.to);
-				assignedRoles.push(comments[item].action.from);
 			}
 		}
 
-		// remove dupliactes and empty strings
+		// remove nulls and empty strings too
 		assignedRoles = _(assignedRoles).uniq().compact().value();
 
-		// const getUsers = await job.findByJobs(teamSpace, assignedRoles);
+		const users = await job.findByJobs(teamSpace, assignedRoles);
 
-		// const users = await getUsers.map(u => this.upsertIssueClosedNotification(u, teamSpace, modelId, issue._id));
-
-		// // await return a function with promises . 
-		// const createNotification = users.then(r => {
-		// 	console.log(r);
-		// })
-
-		// console.log('jobs and ting', createNotification)
-
-		// TODO: need of better name.
-		// Find users 
-		const promises = job.findByJobs(teamSpace, assignedRoles).then(users => {
-				// make sure to notify the job owner. 
 		users.push(owner);
-			
-		return Promise.all(
-			users.map(u => { return this.upsertIssueClosedNotification(u, teamSpace, modelId, issue._id)
-				
-				.then((n) => { return ({ username: u, notification: n }); })
-				})) // end all
-			});
-		return promises;
+
+		const createNotification = await this.filterUsers(users, teamSpace, modelId, issue._id);
+
+		const modelNameNotifications = await fillModelNames(createNotification.map(un => un.notification)).then(() => createNotification);
+
+		return modelNameNotifications;
 	},
 
 	/**
