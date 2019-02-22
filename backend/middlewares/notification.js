@@ -36,6 +36,8 @@ module.exports = {
 
 		// TODO: Remove issue closed notifications. 
 		if (issues.isIssueBeingClosed(oldIssue, issue)) {
+			console.log('old ISSUE', oldIssue);
+			console.log('issue', issue);
 			notification.upsertIssueClosedNotifications(username, teamspace, modelId, issue).
 				then((notifications) => {
 					console.log('notifications', notifications);

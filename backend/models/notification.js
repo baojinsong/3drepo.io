@@ -129,10 +129,10 @@ module.exports = {
 		return this.insertNotification(username, types.MODEL_UPDATED, data);
 	},
 
-	removeIssueAssignedNotification:function(username, teamSpace, modelId, issueId) {
+	removeIssueAssignedNotification:function(username, teamSpace, modelId, issueId, issueType) {
 		const criteria = {teamSpace,  modelId, issuesId:{$in: [issueId]}};
 
-		return getNotification(username, types.ISSUE_ASSIGNED, criteria).then(notifications => {
+		return getNotification(username, issueType, criteria).then(notifications => {
 			if (notifications.length === 0) {
 				return null;
 			} else {
@@ -176,19 +176,24 @@ module.exports = {
 	upsertIssueClosedNotifications: async function (username, teamSpace, modelId, issue) {
 		// find user assigned 
 		const rolesKey = 'assigned_roles';
-		let assignedRoles = [];
 		const owner = issue.owner;
+		let assignedRoles = [];
 
 		const comments = issue.comments;
 
 		for (let item in comments) {
-			if (comments[item].action.property === rolesKey) {
+			let actionProperty = comments[item].action
+			if (actionProperty && actionProperty.property === rolesKey) {
 				assignedRoles.push(comments[item].action.to);
+				assignedRoles.push(comments[item].action.from);
 			}
 		}
-
+		
 		// remove nulls and empty strings too
-		assignedRoles = _(assignedRoles).uniq().compact().value();
+		// assignedRoles = _(assignedRoles).uniq().compact().value();
+		console.log('before', assignedRoles);
+		const newSet = new Set(assignedRoles);
+		console.log('after', newSet);
 
 		const users = await job.findByJobs(teamSpace, assignedRoles);
 
@@ -289,10 +294,30 @@ module.exports = {
 		return notifications;
 	},
 
+	removeClosedNotifications : function(username, teamSpace, modelId, issue) {
+		if (!issue) {
+			return Promise.resolve([]);
+		}
+
+		const issueType = types.ISSUE_CLOSED;
+
+		const assignedRole = issue.assigned_roles[0];
+
+		// 1. get users that match the assigned roles, as you do in the main function.
+
+		// 2. map these results to the single notification method. 
+		
+		// 3. 
+		
+		
+	},
+
 	removeAssignedNotifications : function(username, teamSpace, modelId, issue) {
 		if (!issue) {
 			return Promise.resolve([]);
 		}
+
+		const issueType = types.ISSUE_ASSIGNED;
 
 		const assignedRole = issue.assigned_roles[0];
 
@@ -306,7 +331,7 @@ module.exports = {
 			})
 			.then((users) => {
 				return Promise.all(
-					users.map(u => this.removeIssueAssignedNotification(u, teamSpace, modelId, utils.objectIdToString(issue._id)).then(n =>
+					users.map(u => this.removeIssueAssignedNotification(u, teamSpace, modelId, utils.objectIdToString(issue._id), issueType).then(n =>
 						Object.assign({username:u}, n))))
 					.then(notifications => notifications.reduce((a,c) => ! c.notification ? a : a.concat(c), []))
 					.then(usersNotifications => {
