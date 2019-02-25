@@ -181,9 +181,20 @@ module.exports = {
 
 		const comments = issue.comments;
 
+		// for (let item in comments) {
+		// 	let actionProperty = comments[item].action
+		// 	if (actionProperty && actionProperty.property === rolesKey) {
+		// 		assignedRoles.add(actionProperty.to);
+		// 		assignedRoles.add(actionProperty.from);
+		// 	}
+		// }
+
 		for (let item in comments) {
 			let actionProperty = comments[item].action
-			if (actionProperty && actionProperty.property === rolesKey) {
+			if (!actionProperty) {
+				// if not other users have been assigned , than still make sure you get the current assignedrole.
+				assignedRoles.add(issue.assigned_roles);
+			} else if (actionProperty && actionProperty.property === rolesKey) {
 				assignedRoles.add(actionProperty.to);
 				assignedRoles.add(actionProperty.from);
 			}
