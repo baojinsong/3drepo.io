@@ -168,7 +168,7 @@ module.exports = {
 		return Promise.all(users.map(u => {
 			return this.upsertIssueClosedNotification(u, teamSpace, modelId, issueId)
 				.then((n) => {
-					return ({ username: u, notification: n });
+					return ({ username: u, notification: n }); 
 				})
 		}))
 	},
@@ -177,25 +177,19 @@ module.exports = {
 		// find user assigned 
 		const rolesKey = 'assigned_roles';
 		const owner = issue.owner;
-		let assignedRoles = [];
+		let assignedRoles = new Set();
 
 		const comments = issue.comments;
 
 		for (let item in comments) {
 			let actionProperty = comments[item].action
 			if (actionProperty && actionProperty.property === rolesKey) {
-				assignedRoles.push(comments[item].action.to);
-				assignedRoles.push(comments[item].action.from);
+				assignedRoles.add(actionProperty.to);
+				assignedRoles.add(actionProperty.from);
 			}
 		}
-		
-		// remove nulls and empty strings too
-		// assignedRoles = _(assignedRoles).uniq().compact().value();
-		console.log('before', assignedRoles);
-		const newSet = new Set(assignedRoles);
-		console.log('after', newSet);
 
-		const users = await job.findByJobs(teamSpace, assignedRoles);
+		const users = await job.findByJobs(teamSpace, [...assignedRoles]);
 
 		users.push(owner);
 
