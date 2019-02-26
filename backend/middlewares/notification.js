@@ -34,18 +34,28 @@ module.exports = {
 			issue = req.dataModel;
 		}
 
-		// TODO: Remove issue closed notifications. 
 		if (issues.isIssueBeingClosed(oldIssue, issue)) {
-			console.log('old ISSUE', oldIssue);
-			console.log('issue', issue);
-			notification.upsertIssueClosedNotifications(username, teamspace, modelId, issue).
-				then((notifications) => {
-					console.log('notifications', notifications);
+			Promise.all([
+				notification.removeClosedNotifications(username, teamspace, modelId, oldIssue),
+				notification.upsertIssueClosedNotifications(username, teamspace, modelId, issue)
+			]).then((notifications) => {
+					notifications = _.flatten(notifications);
 					req.userNotifications = notifications;
 					next();
 				});
 			return;
-		}
+		}		
+
+		// TODO: Remove issue closed notifications. 
+		// if (issues.isIssueBeingClosed(oldIssue, issue)) {
+		// 	notification.upsertIssueClosedNotifications(username, teamspace, modelId, issue).
+		// 		then((notifications) => {
+		// 			req.userNotifications = notifications;
+		// 			console.log('notifications', req.userNotifications);
+		// 			next();
+		// 		});
+		// 	return;
+		// }
 		
 
 		if (!isCommentModification && issues.isIssueAssignment(oldIssue, issue)) {
