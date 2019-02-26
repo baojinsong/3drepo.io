@@ -41,22 +41,11 @@ module.exports = {
 			]).then((notifications) => {
 					notifications = _.flatten(notifications);
 					req.userNotifications = notifications;
+					console.log('notifications', notifications);
 					next();
 				});
 			return;
 		}		
-
-		// TODO: Remove issue closed notifications. 
-		// if (issues.isIssueBeingClosed(oldIssue, issue)) {
-		// 	notification.upsertIssueClosedNotifications(username, teamspace, modelId, issue).
-		// 		then((notifications) => {
-		// 			req.userNotifications = notifications;
-		// 			console.log('notifications', req.userNotifications);
-		// 			next();
-		// 		});
-		// 	return;
-		// }
-		
 
 		if (!isCommentModification && issues.isIssueAssignment(oldIssue, issue)) {
 			Promise.all([

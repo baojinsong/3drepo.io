@@ -173,27 +173,16 @@ module.exports = {
 		}))
 	},
 
-// 1. Revert back to a lodash for now. 
-
-// 2. Include the username , filter. 
-
-// 3. Make sure the correct logic is being used. in the correct methods ie:(removeNotis), and (upsertNotis)
-
-// 4. test with out closed method. (confirm working) - As in the correct user's are being assigned, 
-// 	  including those who are assigned and created by themselves. 
-
-// 5. Then re-introduce the remove notification method. 
-
-// 6. Ensure you understand the method , and make sure the logic and what you are passing is correct. 
-//    The use case Santiago explained yesterday was that the notification is removed 
-//	  If one user , was to assign a notification to a PM. 
-//    The PM then receives a notification. 
-//    If one user , the closes that Issue , 
-//    The PM's notification should then be closed.
+	filterUsersDelete: async function (users, teamSpace, modelId, issueId, issueType) {
+		return Promise.all(
+			users.map(u => {
+				this.removeIssueAssignedNotification(u, teamSpace, modelId, utils.objectIdToString(issueId), issueType)
+					.then((n) => { return Object.assign({ username: u, notification: n }) })
+					.then(notifications => notifications.reduce((a, c) => !c.notification ? a : a.concat(c), []))
+			}))
+	},
                                                                                                                                                                         
-
 	upsertIssueClosedNotifications: async function (username, teamSpace, modelId, issue) {
-		console.log('ISSUE', issue);
 		
 		const rolesKey = 'assigned_roles';
 		const owner = issue.owner;
@@ -327,7 +316,7 @@ module.exports = {
 		return notifications;
 	},
 
-	removeClosedNotifications : function(username, teamSpace, modelId, issue) {
+	removeClosedNotifications : async function(username, teamSpace, modelId, issue) {
 		if (!issue) {
 			return Promise.resolve([]);
 		}
@@ -355,19 +344,34 @@ module.exports = {
 			}
 		}
 
-		return job.findByJobs(teamSpace, assignedRoles)
-			.then((usersJobs) => {
-				usersJobs.push(owner);
-				let users = usersJobs.filter(m => m !== username);
-				users = _(users).uniq().compact().value();		
-				return Promise.all(
-					users.map(u => this.removeIssueAssignedNotification(u, teamSpace, modelId, utils.objectIdToString(issue._id), issueType).then(n =>
-						Object.assign({ username: u }, n))))
-					.then(notifications => notifications.reduce((a, c) => !c.notification ? a : a.concat(c), []))
-					.then(usersNotifications => {
-						return fillModelNames(usersNotifications.map(un => un.notification)).then(() => usersNotifications);
-					});
-			});
+
+		// 1. Get the users roles
+		const getUserJobs = await job.findByJobs(teamSpace, assignedRoles);
+
+		// 2. Filter the notifications, for each user to delete.  
+		const filterRolesToNotifications = await this.filterUsersDelete(getUserJobs, teamSpace, modelId, issue._id, issueType);
+
+		// 3. Fill model names for the deleted, issues/notifications.
+		const modelNameClosedNotifications = await fillModelNames(filterRolesToNotifications.map(un => un.notification)).then(() => filterRolesToNotifications);
+
+		return modelNameClosedNotifications;
+
+
+		// return job.findByJobs(teamSpace, assignedRoles)
+		// 	.then((usersJobs) => {
+		// 		usersJobs.push(owner);
+		// 		let users = usersJobs.filter(m => m !== username);
+		// 		users = _(users).uniq().compact().value();		
+		// 		return Promise.all(
+		// 			users.map(u => this.removeIssueAssignedNotification(u, teamSpace, modelId, utils.objectIdToString(issue._id), issueType).then(n =>
+		// 				Object.assign({ username: u }, n))))
+
+		// 			.then(notifications => notifications.reduce((a, c) => !c.notification ? a : a.concat(c), []))
+					
+		// 			.then(usersNotifications => {
+		// 				return fillModelNames(usersNotifications.map(un => un.notification)).then(() => usersNotifications);
+		// 			});
+		// 	});
 		
 		
 	},
