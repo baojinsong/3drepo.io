@@ -173,36 +173,64 @@ module.exports = {
 		}))
 	},
 
+// 1. Revert back to a lodash for now. 
+
+// 2. Include the username , filter. 
+
+// 3. Make sure the correct logic is being used. in the correct methods ie:(removeNotis), and (upsertNotis)
+
+// 4. test with out closed method. (confirm working) - As in the correct user's are being assigned, 
+// 	  including those who are assigned and created by themselves. 
+
+// 5. Then re-introduce the remove notification method. 
+
+// 6. Ensure you understand the method , and make sure the logic and what you are passing is correct. 
+//    The use case Santiago explained yesterday was that the notification is removed 
+//	  If one user , was to assign a notification to a PM. 
+//    The PM then receives a notification. 
+//    If one user , the closes that Issue , 
+//    The PM's notification should then be closed.
+                                                                                                                                                                        
+
 	upsertIssueClosedNotifications: async function (username, teamSpace, modelId, issue) {
-		// find user assigned 
+		console.log('ISSUE', issue);
+		
 		const rolesKey = 'assigned_roles';
 		const owner = issue.owner;
-		let assignedRoles = new Set();
+		let assignedRoles = [];
 
 		const comments = issue.comments;
 
-		// for (let item in comments) {
-		// 	let actionProperty = comments[item].action
-		// 	if (actionProperty && actionProperty.property === rolesKey) {
-		// 		assignedRoles.add(actionProperty.to);
-		// 		assignedRoles.add(actionProperty.from);
-		// 	}
-		// }
-
 		for (let item in comments) {
 			let actionProperty = comments[item].action
-			if (!actionProperty) {
-				// if not other users have been assigned , than still make sure you get the current assignedrole.
-				assignedRoles.add(issue.assigned_roles);
-			} else if (actionProperty && actionProperty.property === rolesKey) {
-				assignedRoles.add(actionProperty.to);
-				assignedRoles.add(actionProperty.from);
+
+			// If no additional roles have been assigned , 
+			// make sure we add the current assigned role. 
+			if (actionProperty.property !== rolesKey) {
+				assignedRoles.push(issue.assigned_roles);
+			}
+			
+			// Check for additional roles that have been assigned 
+			// using the issue comments. 
+			if (actionProperty && actionProperty.property === rolesKey) {
+				assignedRoles.push(actionProperty.to);
+				assignedRoles.push(actionProperty.from);
 			}
 		}
+		
+		// remove nulls and empty strings too
+		assignedRoles = _(assignedRoles).uniq().compact().value();
 
-		const users = await job.findByJobs(teamSpace, [...assignedRoles]);
 
-		users.push(owner);
+		const usersJobs = await job.findByJobs(teamSpace, assignedRoles);
+		
+		usersJobs.push(owner);
+		
+		let users = usersJobs.filter(m => m !== username);
+		
+		// remove duplicates again , TODO: this may be redundant right now but need 
+		// to make sure the notifications are working. 
+		users = _(users).uniq().compact().value();		
 
 		const createNotification = await this.filterUsers(users, teamSpace, modelId, issue._id);
 
@@ -304,15 +332,42 @@ module.exports = {
 			return Promise.resolve([]);
 		}
 
+		const rolesKey = 'assigned_roles';
+
+		const owner = issue.owner;
+
 		const issueType = types.ISSUE_CLOSED;
 
-		const assignedRole = issue.assigned_roles[0];
+		let assignedRoles = [];
 
-		// 1. get users that match the assigned roles, as you do in the main function.
+		const comments = issue.comments;
 
-		// 2. map these results to the single notification method. 
-		
-		// 3. 
+		for (let item in comments) {
+			let actionProperty = comments[item].action
+
+			if (actionProperty.property !== rolesKey) {
+				assignedRoles.push(issue.assigned_roles);
+			}
+
+			if (actionProperty && actionProperty.property === rolesKey) {
+				assignedRoles.push(actionProperty.to);
+				assignedRoles.push(actionProperty.from);
+			}
+		}
+
+		return job.findByJobs(teamSpace, assignedRoles)
+			.then((usersJobs) => {
+				usersJobs.push(owner);
+				let users = usersJobs.filter(m => m !== username);
+				users = _(users).uniq().compact().value();		
+				return Promise.all(
+					users.map(u => this.removeIssueAssignedNotification(u, teamSpace, modelId, utils.objectIdToString(issue._id), issueType).then(n =>
+						Object.assign({ username: u }, n))))
+					.then(notifications => notifications.reduce((a, c) => !c.notification ? a : a.concat(c), []))
+					.then(usersNotifications => {
+						return fillModelNames(usersNotifications.map(un => un.notification)).then(() => usersNotifications);
+					});
+			});
 		
 		
 	},
