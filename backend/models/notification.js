@@ -176,10 +176,12 @@ module.exports = {
 	filterUsersDelete: async function (users, teamSpace, modelId, issueId, issueType) {
 		return Promise.all(
 			users.map(u => {
-				this.removeIssueAssignedNotification(u, teamSpace, modelId, utils.objectIdToString(issueId), issueType)
-					.then((n) => { return Object.assign({ username: u, notification: n }) })
-					.then(notifications => notifications.reduce((a, c) => !c.notification ? a : a.concat(c), []))
-			}))
+				return this.removeIssueAssignedNotification(u, teamSpace, modelId, utils.objectIdToString(issueId), issueType)
+					.then((n) => { 
+						return Object.assign({ username: u}, n) 
+					})
+			})).then(notifications => notifications.reduce((a, c) => !c.notification ? a : a.concat(c), []))
+
 	},
                                                                                                                                                                         
 	upsertIssueClosedNotifications: async function (username, teamSpace, modelId, issue) {
@@ -376,7 +378,7 @@ module.exports = {
 		
 	},
 
-	removeAssignedNotifications : function(username, teamSpace, modelId, issue) {
+	removeAssignedNotifications : function(username, teamSpace, modelId, issue) { 
 		if (!issue) {
 			return Promise.resolve([]);
 		}
