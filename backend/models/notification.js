@@ -184,9 +184,10 @@ module.exports = {
 
 	},
                                                                                                                                                                         
-	upsertIssueClosedNotifications: async function (username, teamSpace, modelId, issue) {
+	upsertIssueClosedNotifications: async function (teamSpace, modelId, issue) {
 		
 		const rolesKey = 'assigned_roles';
+		const owner = issue.owner;
 		let assignedRoles = new Set();
 
 		const comments = issue.comments;
@@ -210,8 +211,8 @@ module.exports = {
 
 		const usersJobs = await job.findByJobs(teamSpace, [...assignedRoles]);
 
-		if (usersJobs.indexOf(username) === -1) {
-			usersJobs.push(username);
+		if (usersJobs.indexOf(owner) === -1) {
+			usersJobs.push(owner);
 		}
 		
 		const createNotifications = await this.createUserNotification(usersJobs, teamSpace, modelId, issue._id);
@@ -309,13 +310,13 @@ module.exports = {
 		return notifications;
 	},
 
-	removeClosedNotifications : async function(username, teamSpace, modelId, issue) {
+	removeClosedNotifications : async function(teamSpace, modelId, issue) {
 		if (!issue) {
 			return Promise.resolve([]);
 		}
 
 		const rolesKey = 'assigned_roles';
-
+		const owner = issue.owner;
 		const issueType = types.ISSUE_CLOSED;
 
 		let assignedRoles = [];
@@ -338,8 +339,8 @@ module.exports = {
 		const getUserJobs = await job.findByJobs(teamSpace, assignedRoles);
 
 		// Make sure the issue owner is notified.
-		if (getUserJobs.indexOf(username) === -1) {
-			getUserJobs.push(username);
+		if (getUserJobs.indexOf(owner) === -1) {
+			getUserJobs.push(owner);
 		}
 
 		// Filter the notifications, for each user to delete.  
