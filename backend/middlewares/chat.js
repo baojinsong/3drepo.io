@@ -26,8 +26,6 @@ module.exports = {
 		const deletedNotifications = notifications.filter(n => n.deleted);
 		const upsertedNotifications = notifications.filter(n => !n.deleted);
 
-		console.log('deleted notifications', deletedNotifications);
-
 		deletedNotifications.forEach(chatEvent.deletedNotification.bind(null,sessionId));
 		upsertedNotifications.forEach(chatEvent.upsertedNotification.bind(null,sessionId));
 		next();
