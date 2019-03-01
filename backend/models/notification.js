@@ -164,7 +164,7 @@ module.exports = {
 			.then(c => c.deleteMany({}));
 	},
 
-	filterUsers: async function (users, teamSpace, modelId, issueId) {
+	createUserNotification: async function (users, teamSpace, modelId, issueId) {
 		return Promise.all(users.map(u => {
 			return this.upsertIssueClosedNotification(u, teamSpace, modelId, issueId)
 				.then((n) => {
@@ -173,7 +173,7 @@ module.exports = {
 		}))
 	},
 
-	filterUsersDelete: async function (users, teamSpace, modelId, issueId, issueType) {
+	removeUserNotification: async function (users, teamSpace, modelId, issueId, issueType) {
 		return Promise.all(
 			users.map(u => {
 				return this.removeIssueAssignedNotification(u, teamSpace, modelId, utils.objectIdToString(issueId), issueType)
@@ -187,8 +187,7 @@ module.exports = {
 	upsertIssueClosedNotifications: async function (username, teamSpace, modelId, issue) {
 		
 		const rolesKey = 'assigned_roles';
-		const owner = issue.owner;
-		let assignedRoles = [];
+		let assignedRoles = new Set();
 
 		const comments = issue.comments;
 
@@ -198,36 +197,28 @@ module.exports = {
 			// If no additional roles have been assigned , 
 			// make sure we add the current assigned role. 
 			if (actionProperty.property !== rolesKey) {
-				assignedRoles.push(issue.assigned_roles);
+				assignedRoles.add(issue.assigned_roles);
 			}
 			
 			// Check for additional roles that have been assigned 
 			// using the issue comments. 
 			if (actionProperty && actionProperty.property === rolesKey) {
-				assignedRoles.push(actionProperty.to);
-				assignedRoles.push(actionProperty.from);
+				assignedRoles.add(actionProperty.to);
+				assignedRoles.add(actionProperty.from);
 			}
+		}	
+
+		const usersJobs = await job.findByJobs(teamSpace, [...assignedRoles]);
+
+		if (usersJobs.indexOf(username) === -1) {
+			usersJobs.push(username);
 		}
 		
-		// remove nulls and empty strings too
-		assignedRoles = _(assignedRoles).uniq().compact().value();
+		const createNotifications = await this.createUserNotification(usersJobs, teamSpace, modelId, issue._id);
 
+		const addModelNameNotification = await fillModelNames(createNotifications.map(un => un.notification)).then(() => createNotifications);
 
-		const usersJobs = await job.findByJobs(teamSpace, assignedRoles);
-		
-		usersJobs.push(owner);
-		
-		let users = usersJobs.filter(m => m !== username);
-		
-		// remove duplicates again , TODO: this may be redundant right now but need 
-		// to make sure the notifications are working. 
-		users = _(users).uniq().compact().value();		
-
-		const createNotification = await this.filterUsers(users, teamSpace, modelId, issue._id);
-
-		const modelNameNotifications = await fillModelNames(createNotification.map(un => un.notification)).then(() => createNotification);
-
-		return modelNameNotifications;
+		return addModelNameNotification;
 	},
 
 	/**
@@ -325,8 +316,6 @@ module.exports = {
 
 		const rolesKey = 'assigned_roles';
 
-		const owner = issue.owner;
-
 		const issueType = types.ISSUE_CLOSED;
 
 		let assignedRoles = [];
@@ -346,35 +335,20 @@ module.exports = {
 			}
 		}
 
-
-		// 1. Get the users roles
 		const getUserJobs = await job.findByJobs(teamSpace, assignedRoles);
 
-		// 2. Filter the notifications, for each user to delete.  
-		const filterRolesToNotifications = await this.filterUsersDelete(getUserJobs, teamSpace, modelId, issue._id, issueType);
+		// Make sure the issue owner is notified.
+		if (getUserJobs.indexOf(username) === -1) {
+			getUserJobs.push(username);
+		}
 
-		// 3. Fill model names for the deleted, issues/notifications.
+		// Filter the notifications, for each user to delete.  
+		const filterRolesToNotifications = await this.removeUserNotification(getUserJobs, teamSpace, modelId, issue._id, issueType);
+
+		// Fill model names for the deleted, issues/notifications.
 		const modelNameClosedNotifications = await fillModelNames(filterRolesToNotifications.map(un => un.notification)).then(() => filterRolesToNotifications);
 
 		return modelNameClosedNotifications;
-
-
-		// return job.findByJobs(teamSpace, assignedRoles)
-		// 	.then((usersJobs) => {
-		// 		usersJobs.push(owner);
-		// 		let users = usersJobs.filter(m => m !== username);
-		// 		users = _(users).uniq().compact().value();		
-		// 		return Promise.all(
-		// 			users.map(u => this.removeIssueAssignedNotification(u, teamSpace, modelId, utils.objectIdToString(issue._id), issueType).then(n =>
-		// 				Object.assign({ username: u }, n))))
-
-		// 			.then(notifications => notifications.reduce((a, c) => !c.notification ? a : a.concat(c), []))
-					
-		// 			.then(usersNotifications => {
-		// 				return fillModelNames(usersNotifications.map(un => un.notification)).then(() => usersNotifications);
-		// 			});
-		// 	});
-		
 		
 	},
 
