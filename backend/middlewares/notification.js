@@ -34,25 +34,12 @@ module.exports = {
 			issue = req.dataModel;
 		}
 
-		// if (issues.isIssueBeingClosed(oldIssue, issue)) {
-		// 	Promise.all([
-		// 		notification.removeClosedNotifications(username, teamspace, modelId, oldIssue),
-		// 		notification.upsertIssueClosedNotifications(username, teamspace, modelId, issue)
-		// 	]).then((notifications) => {
-		// 			notifications = _.flatten(notifications);
-		// 			req.userNotifications = notifications;
-		// 			console.log('notifications', notifications);
-		// 			next();
-		// 		});
-		// 	return;
-		// }
-		
+
 		if (issues.isIssueBeingClosed(oldIssue, issue)) {
 				notification.upsertIssueClosedNotifications(username, teamspace, modelId, issue)
 				.then((notifications) => {
 				notifications = _.flatten(notifications);
 				req.userNotifications = notifications;
-				console.log('notifications', notifications);
 				next();
 			});
 			return;
@@ -63,7 +50,6 @@ module.exports = {
 				.then((notifications) => {
 					notifications = _.flatten(notifications);
 					req.userNotifications = notifications;
-					console.log('notifications', notifications);
 					next();
 				});
 			return;
