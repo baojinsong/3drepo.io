@@ -19,7 +19,6 @@
 const { hasWriteAccessToModelHelper, hasReadAccessToModelHelper } = require("../middlewares/checkPermissions");
 const modelSettings = require("../models/modelSetting");
 const job = require("./job");
-const issue = require("./issue");
 const utils = require("../utils");
 const uuid = require("node-uuid");
 const db = require("../handler/db");
@@ -129,7 +128,7 @@ module.exports = {
 		return this.insertNotification(username, types.MODEL_UPDATED, data);
 	},
 
-	removeIssueAssignedNotification:function(username, teamSpace, modelId, issueId, issueType) {
+	removeIssueAssignedNotification: function(username, teamSpace, modelId, issueId, issueType) {
 		const criteria = {teamSpace,  modelId, issuesId:{$in: [issueId]}};
 
 		return getNotification(username, issueType, criteria).then(notifications => {
@@ -168,53 +167,51 @@ module.exports = {
 		return Promise.all(users.map(u => {
 			return this.upsertIssueClosedNotification(u, teamSpace, modelId, issueId)
 				.then((n) => {
-					return ({ username: u, notification: n }); 
-				})
-		}))
+					return ({ username: u, notification: n });
+				});
+		}));
 	},
 
 	removeUserNotification: async function (users, teamSpace, modelId, issueId, issueType) {
 		return Promise.all(
 			users.map(u => {
 				return this.removeIssueAssignedNotification(u, teamSpace, modelId, utils.objectIdToString(issueId), issueType)
-					.then((n) => { 
-						return Object.assign({ username: u}, n) 
-					})
-			})).then(notifications => notifications.reduce((a, c) => !c.notification ? a : a.concat(c), []))
+					.then((n) => {
+						return Object.assign({ username: u}, n);
+					});
+			})).then(notifications => notifications.reduce((a, c) => !c.notification ? a : a.concat(c), []));
 
 	},
-                                                                                                                                                                        
+
 	upsertIssueClosedNotifications: async function (teamSpace, modelId, issue) {
-		
-		const rolesKey = 'assigned_roles';
+		const rolesKey = "assigned_roles";
 		const owner = issue.owner;
-		let assignedRoles = new Set();
+		const assignedRoles = new Set();
 
 		const comments = issue.comments;
 
-		for (let item in comments) {
-			let actionProperty = comments[item].action
+		for (const item in comments) {
+			const actionProperty = comments[item].action;
 
-			// If no additional roles have been assigned , 
-			// make sure we add the current assigned role. 
+			// If no additional roles have been assigned ,
+			// make sure we add the current assigned role.
 			if (actionProperty.property !== rolesKey) {
 				assignedRoles.add(issue.assigned_roles);
 			}
-			
-			// Check for additional roles that have been assigned 
-			// using the issue comments. 
+			// Check for additional roles that have been assigned
+			// using the issue comments.
 			if (actionProperty && actionProperty.property === rolesKey) {
 				assignedRoles.add(actionProperty.to);
 				assignedRoles.add(actionProperty.from);
 			}
-		}	
+		}
 
 		const usersJobs = await job.findByJobs(teamSpace, [...assignedRoles]);
 
 		if (usersJobs.indexOf(owner) === -1) {
 			usersJobs.push(owner);
 		}
-		
+
 		const createNotifications = await this.createUserNotification(usersJobs, teamSpace, modelId, issue._id);
 
 		const addModelNameNotification = await fillModelNames(createNotifications.map(un => un.notification)).then(() => createNotifications);
@@ -257,7 +254,7 @@ module.exports = {
 				const assignedUsers = users.filter(u => u.canWrite).map(u=> u.user);
 				return Promise.all(
 					assignedUsers.map(u => this.upsertIssueAssignedNotification(u, teamSpace, modelId, issue._id)
-					.then(n=>({username:u, notification:n})))
+						.then(n=>({username:u, notification:n})))
 				).then(usersNotifications => {
 					return fillModelNames(usersNotifications.map(un => un.notification)).then(()=> usersNotifications);
 				});
@@ -315,16 +312,16 @@ module.exports = {
 			return Promise.resolve([]);
 		}
 
-		const rolesKey = 'assigned_roles';
+		const rolesKey = "assigned_roles";
 		const owner = issue.owner;
 		const issueType = types.ISSUE_CLOSED;
 
-		let assignedRoles = [];
+		const assignedRoles = [];
 
 		const comments = issue.comments;
 
-		for (let item in comments) {
-			let actionProperty = comments[item].action
+		for (const item in comments) {
+			const actionProperty = comments[item].action;
 
 			if (actionProperty.property !== rolesKey) {
 				assignedRoles.push(issue.assigned_roles);
@@ -343,17 +340,17 @@ module.exports = {
 			getUserJobs.push(owner);
 		}
 
-		// Filter the notifications, for each user to delete.  
+		// Filter the notifications, for each user to delete.
 		const filterRolesToNotifications = await this.removeUserNotification(getUserJobs, teamSpace, modelId, issue._id, issueType);
 
 		// Fill model names for the deleted, issues/notifications.
 		const modelNameClosedNotifications = await fillModelNames(filterRolesToNotifications.map(un => un.notification)).then(() => filterRolesToNotifications);
 
 		return modelNameClosedNotifications;
-		
+
 	},
 
-	removeAssignedNotifications : function(username, teamSpace, modelId, issue) { 
+	removeAssignedNotifications : function(username, teamSpace, modelId, issue) {
 		if (!issue) {
 			return Promise.resolve([]);
 		}
