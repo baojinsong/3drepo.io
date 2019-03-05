@@ -200,6 +200,8 @@ module.exports = {
 			}
 			// Check for additional roles that have been assigned
 			// using the issue comments.
+
+			// TODO: Add check for .property, should fix travis test fail
 			if (actionProperty && actionProperty.property === rolesKey) {
 				assignedRoles.add(actionProperty.to);
 				assignedRoles.add(actionProperty.from);
