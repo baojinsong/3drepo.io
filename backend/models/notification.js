@@ -128,7 +128,7 @@ module.exports = {
 		return this.insertNotification(username, types.MODEL_UPDATED, data);
 	},
 
-	removeIssueAssignedNotification: function(username, teamSpace, modelId, issueId, issueType) {
+	removeIssueNotification: function(username, teamSpace, modelId, issueId, issueType) {
 		const criteria = {teamSpace,  modelId, issuesId:{$in: [issueId]}};
 
 		return getNotification(username, issueType, criteria).then(notifications => {
@@ -175,7 +175,7 @@ module.exports = {
 	removeUserNotification: async function (users, teamSpace, modelId, issueId, issueType) {
 		return Promise.all(
 			users.map(u => {
-				return this.removeIssueAssignedNotification(u, teamSpace, modelId, utils.objectIdToString(issueId), issueType)
+				return this.removeIssueNotification(u, teamSpace, modelId, utils.objectIdToString(issueId), issueType)
 					.then((n) => {
 						return Object.assign({ username: u}, n);
 					});
@@ -195,14 +195,14 @@ module.exports = {
 
 			// If no additional roles have been assigned ,
 			// make sure we add the current assigned role.
-			if (actionProperty.property !== rolesKey) {
+			if (actionProperty && actionProperty.property !== rolesKey) {
 				assignedRoles.add(issue.assigned_roles);
 			}
 			// Check for additional roles that have been assigned
 			// using the issue comments.
 
 			// TODO: Add check for .property, should fix travis test fail
-			if (actionProperty.property && actionProperty.property === rolesKey) {
+			if (actionProperty && actionProperty.property === rolesKey) {
 				assignedRoles.add(actionProperty.to);
 				assignedRoles.add(actionProperty.from);
 			}
@@ -325,7 +325,7 @@ module.exports = {
 		for (const item in comments) {
 			const actionProperty = comments[item].action;
 
-			if (actionProperty.property !== rolesKey) {
+			if (actionProperty && actionProperty.property !== rolesKey) {
 				assignedRoles.push(issue.assigned_roles);
 			}
 
@@ -371,7 +371,7 @@ module.exports = {
 			})
 			.then((users) => {
 				return Promise.all(
-					users.map(u => this.removeIssueAssignedNotification(u, teamSpace, modelId, utils.objectIdToString(issue._id), issueType).then(n =>
+					users.map(u => this.removeIssueNotification(u, teamSpace, modelId, utils.objectIdToString(issue._id), issueType).then(n =>
 						Object.assign({username:u}, n))))
 					.then(notifications => notifications.reduce((a,c) => ! c.notification ? a : a.concat(c), []))
 					.then(usersNotifications => {
