@@ -202,7 +202,7 @@ module.exports = {
 			// using the issue comments.
 
 			// TODO: Add check for .property, should fix travis test fail
-			if (actionProperty && actionProperty.property === rolesKey) {
+			if (actionProperty.property && actionProperty.property === rolesKey) {
 				assignedRoles.add(actionProperty.to);
 				assignedRoles.add(actionProperty.from);
 			}
