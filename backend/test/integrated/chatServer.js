@@ -127,6 +127,7 @@ describe("Chat service", function () {
 		socket = io(config.chat_server.chat_host, {path: "/" + config.chat_server.subdirectory, extraHeaders:{
 			Cookie: `connect.sid=${connectSid}; `
 		}});
+
 		socket.on("connect", function(data) {
 
 			socket.emit("join", {account, model});
@@ -416,15 +417,26 @@ describe("Chat service", function () {
 			socket.on(eventName, function(notification) {
 				socket.off(eventName);
 
-				expect(notification).to.shallowDeepEqual({type:"ISSUE_ASSIGNED",
-															teamSpace: account,
-															modelId: model,
-															read: false});
+				expect(notification).to.shallowDeepEqual(
+					{type:"ISSUE_ASSIGNED",
+					teamSpace: account,
+					modelId: model,
+					read: false}, 
+					);
+
+				expect(notification).to.shallowDeepEqual(
+					{
+					type: "ISSUE_CLOSED",
+					teamSpace: account,
+					modelId: model,
+					read: false
+					},
+				);
 				done();
 			});
 
 			const createIssue =  issue => next => agent2.post(`/${account}/${model}/issues.json`)
-														.send(issue)
+.send(issue)
 														.expect(200 , next);
 
 			const deleteAllNotifications  = next => agent2.delete("/notifications")
