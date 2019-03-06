@@ -1233,7 +1233,6 @@ schema.statics.isIssueBeingReopened = function (oldIssue, newIssue) {
 	return oldIssue.status === "closed" && newIssue.status !== "closed";
 };
 
-
 schema.methods.getBCFMarkup = function(account, model, unit) {
 	this.generateCommentsGUID();
 	this.save();
