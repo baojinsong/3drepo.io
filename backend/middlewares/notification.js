@@ -41,20 +41,20 @@ module.exports = {
 			]).then((notifications) => {
 				notifications = _.flatten(notifications);
 				req.userNotifications = notifications;
-				console.log('notifications', notifications);
 				next();
 			});
 			return;
 		}
 
 		if (issues.isIssueBeingReopened(oldIssue, issue)) {
-			notification.removeClosedNotifications(teamspace, modelId, issue)
-				.then((notifications) => {
-					notifications = _.flatten(notifications);
-					req.userNotifications = notifications;
-					console.log('notifications', notifications);
-					next();
-				});
+			Promise.all([
+				notification.removeAssignedNotifications(username, teamspace, modelId, oldIssue),
+				notification.upsertIssueClosedNotifications(teamspace, modelId, issue)
+			]).then((notifications) => {
+				notifications = _.flatten(notifications);
+				req.userNotifications = notifications;
+				next();
+			});
 			return;
 		}
 
