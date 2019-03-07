@@ -114,6 +114,7 @@ describe('Notifications', function() {
 
 	describe("of type assign issue", function() {
 		let issuesId = [];
+		const filterByIssueAssigned = n => n.filter(n => n.type == 'ISSUE_ASSIGNED');
 
 		const updateIssue = (modelId, issue , id, next) =>
 			agents.teamSpace1.put(`/${account}/${modelId}/issues/${id}.json`)
@@ -318,6 +319,8 @@ describe('Notifications', function() {
 				updateIssue.bind(this, model,issue, issueId),
 				fetchNotification(agents.adminTeamspace1JobA),
 				(notifications, next) => {
+					notifications = filterByIssueAssigned(notifications);
+
 					expect(notifications).to.be.an("array").and.to.have.length(1);
 					expect(notifications[0].issuesId.sort()).to.be.an("array").and.to.eql([issuesId[0]]);
 					next();
@@ -333,6 +336,7 @@ describe('Notifications', function() {
 				updateIssue.bind(this, model,issue, issueId),
 				fetchNotification(agents.adminTeamspace1JobA),
 				(notifications, next) => {
+					notifications = filterByIssueAssigned(notifications);
 					expect(notifications).to.be.an("array").and.to.have.length(0);
 					next();
 				}
@@ -346,6 +350,7 @@ describe('Notifications', function() {
 				assignIssue(model, "Assign issue model1"),
 				fetchNotification(agents.adminTeamspace1JobA),
 				(notifications, next) => {
+					notifications = filterByIssueAssigned(notifications);
 					expect(notifications).to.be.an("array").and.to.have.length(1);
 					expect(notifications[0].issuesId).to.be.an("array").and.to.eql([issuesId[0]]);
 					next();
@@ -353,6 +358,7 @@ describe('Notifications', function() {
 				assignIssue(model2, "Assign issue model2"),
 				fetchNotification(agents.adminTeamspace1JobA),
 				(notifications, next) => {
+					notifications = filterByIssueAssigned(notifications);
 					expect(notifications).to.be.an("array").and.to.have.length(2);
 					const notIssue1 = notifications.find(notification => notification.issuesId.some(item => item == issuesId[0]));
 					const notIssue2 = notifications.find(notification => notification.issuesId.some(item => item == issuesId[1]));
@@ -380,6 +386,7 @@ describe('Notifications', function() {
 					},
 				fetchNotification(agents.adminTeamspace1JobA),
 				(notifications, next) => {
+					notifications = filterByIssueAssigned(notifications);
 					expect(notifications).to.be.an("array").and.to.have.length(0);
 					next();
 				},
@@ -388,6 +395,7 @@ describe('Notifications', function() {
 						.expect(200, next),
 				fetchNotification(agents.adminTeamspace1JobA),
 				(notifications, next) => {
+					notifications = filterByIssueAssigned(notifications);
 					expect(notifications).to.be.an("array").and.to.have.length(1);
 					next();
 				},

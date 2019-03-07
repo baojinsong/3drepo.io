@@ -36,7 +36,7 @@ module.exports = {
 
 		if (issues.isIssueBeingClosed(oldIssue, issue)) {
 			Promise.all([
-				notification.removeClosedNotifications(teamspace, modelId, oldIssue),
+				notification.removeAssignedNotifications(username, teamspace, modelId, oldIssue),
 				notification.upsertIssueClosedNotifications(teamspace, modelId, issue)
 			]).then((notifications) => {
 				notifications = _.flatten(notifications);
@@ -48,11 +48,11 @@ module.exports = {
 
 		if (issues.isIssueBeingReopened(oldIssue, issue)) {
 			notification.upsertIssueClosedNotifications(teamspace, modelId, issue)
-			.then((notifications) => {
-				notifications = _.flatten(notifications);
-				req.userNotifications = notifications;
-				next();
-			});
+				.then((notifications) => {
+					notifications = _.flatten(notifications);
+					req.userNotifications = notifications;
+					next();
+				});
 			return;
 		}
 
