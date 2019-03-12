@@ -20,9 +20,11 @@ const expect = require("chai").expect;
 const app = require("../../services/api.js").createApp();
 const async = require("async");
 
+const agents = {};
+
+
 describe('Notifications', function() {
 	let server;
-	const agents = {};
 	const NOTIFICATIONS_URL = "/notifications";
 
 	const usernames = ["unassignedTeamspace1UserJobA",
@@ -34,7 +36,12 @@ describe('Notifications', function() {
 		"collaboratorTeamspace1Model1JobB",
 		"adminTeamspace1JobA",
 		"adminTeamspace1JobB",
-		"teamSpace1"];
+		"viewerTeamspace1Model1JobC",
+		"collaboratorTeamspace1Model1JobC",
+		"viewerTeamspace1Model1JobD",
+		"collaboratorTeamspace1Model1JobD",
+		"teamSpace1"]; // This is causing the MaxListenersExceededWarning;
+					   // everything seems to be working as expected so it can be ignore (unless something changes)
 
 	const password = "password";
 	const account = "teamSpace1";
@@ -62,14 +69,38 @@ describe('Notifications', function() {
 		"assigned_roles":[]
 	};
 
+	const updateIssue = (modelId, issue , id) => next => {
+			return agents.teamSpace1.put(`/${account}/${modelId}/issues/${id}.json`)
+				.send(issue)
+				.expect(200 , function(err, res) {
+						next(err);
+					});
+		}
+
+	const filterByIssueAssigned = n => n.filter(n => n.type == 'ISSUE_ASSIGNED');
+	const filterByIssueClosed = n => n.filter(n => n.type == 'ISSUE_CLOSED');
+
+	const deleteAllNotifications = next => {
+		async.parallel(
+			usernames.map(username => next =>
+			{
+				const agent = agents[username];
+				agent.delete(NOTIFICATIONS_URL)
+					.expect(200, function(err, res) {
+						next(err);
+					});
+			}), next);
+	};
+
 	before(function(done) {
 		server = app.listen(8080, function () {
-			async.series( [
+			async.series([
 				(next) => {
 					async.parallel(
 						usernames.map( username => next =>
 						{
 							const agent = request.agent(server);
+
 							agent.post("/login")
 								.send({ username, password})
 								.expect(200, function(err, res) {
@@ -79,29 +110,8 @@ describe('Notifications', function() {
 							agents[username] = agent;
 						}),next);
 				},
-				(next) => {
-					async.parallel(
-						usernames.map(username => next =>
-						{
-							const agent = agents[username];
-							agent.delete(NOTIFICATIONS_URL)
-								.expect(200, function(err, res) {
-									next(err);
-								});
-						}), next);
-				},
-				(next) => {
-					async.parallel(
-						usernames.map(username => next =>
-						{
-							const agent = agents[username];
-							agent.get(NOTIFICATIONS_URL)
-								.expect(200, function(err, res) {
-									next(err);
-								});
-						}), next);
-				}]
-				, done);
+				deleteAllNotifications]
+				,done );
 		});
 	});
 
@@ -112,41 +122,34 @@ describe('Notifications', function() {
 		});
 	});
 
+	const fetchNotification = function(agent) {
+		return function() {
+			const next = arguments[arguments.length-1];
+
+			agent.get(NOTIFICATIONS_URL)
+				.expect(200, (err, res) => next(err, res.body));
+	}};
+
+	// ========================================
+	// Test suite for assign issue notification
+	// ========================================
 	describe("of type assign issue", function() {
 		let issuesId = [];
-		const filterByIssueAssigned = n => n.filter(n => n.type == 'ISSUE_ASSIGNED');
-
-		const updateIssue = (modelId, issue , id, next) =>
-			agents.teamSpace1.put(`/${account}/${modelId}/issues/${id}.json`)
-				.send(issue)
-				.expect(200 , function(err, res) {
-						next(err);
-					})
-
 
 		const assignIssue = (modelId, name) => done => {
 			const issue = Object.assign({"name":( name || "Assign notification test") }, baseIssue);
 			const issueAssignJobA = Object.assign({}, issue, {"assigned_roles":["jobA"]});
-
-			async.waterfall([next =>
+			async.series([next =>
 				agents.teamSpace1.post(`/${account}/${modelId}/issues.json`)
 					.send(issue)
 					.expect(200 , function(err, res) {
 							issuesId.push(res.body._id);
-							next(err, res.body._id);
+							const id = issuesId[issuesId.length-1];
+							next(err);
 						}),
-				updateIssue.bind(this, modelId, issueAssignJobA)
+				next =>	updateIssue(modelId, issueAssignJobA,issuesId[issuesId.length-1])(next)
 				], done);
 		}
-
-
-		const fetchNotification = function(agent) {
-			return function() {
-				const next = arguments[arguments.length-1];
-
-				agent.get(NOTIFICATIONS_URL)
-					.expect(200, (err, res) => next(err, res.body));
-		}};
 
 
 		before(assignIssue(model));
@@ -293,14 +296,14 @@ describe('Notifications', function() {
 			const issueID2 = issuesId[1];
 
 			async.waterfall([
-				updateIssue.bind(this, model, issue, issueID1),
+				updateIssue(model, issue, issueID1),
 				fetchNotification(agents.adminTeamspace1JobA),
 				(notifications, next) => {
 					expect(notifications).to.be.an("array").and.to.have.length(1);
 					expect(notifications[0].issuesId.sort()).to.be.an("array").and.to.eql( [issueID2]);
 					next();
 				},
-				updateIssue.bind(this, model, issueJobA, issueID1),
+				updateIssue(model, issueJobA, issueID1),
 				fetchNotification(agents.adminTeamspace1JobA),
 				(notifications, next) => {
 					expect(notifications).to.be.an("array").and.to.have.length(1);
@@ -316,7 +319,7 @@ describe('Notifications', function() {
 			const issueId = issuesId.pop();
 
 			async.waterfall([
-				updateIssue.bind(this, model,issue, issueId),
+				updateIssue(model,issue, issueId),
 				fetchNotification(agents.adminTeamspace1JobA),
 				(notifications, next) => {
 					notifications = filterByIssueAssigned(notifications);
@@ -333,7 +336,7 @@ describe('Notifications', function() {
 			const issueId = issuesId.pop();
 
 			async.waterfall([
-				updateIssue.bind(this, model,issue, issueId),
+				updateIssue(model, issue, issueId),
 				fetchNotification(agents.adminTeamspace1JobA),
 				(notifications, next) => {
 					notifications = filterByIssueAssigned(notifications);
@@ -403,6 +406,168 @@ describe('Notifications', function() {
 		});
 	});
 
+	// ========================================
+	// Test suite for closed issue notification
+	// ========================================
+	describe("of type closed issue", function() {
+		let issuesId = [];
+		const issue = Object.assign({}, baseIssue,  {"name": "Closed notification test","assigned_roles":["jobB"]});
+
+		const testForNoClosedNotification = username => done => {
+			const agent = agents[username];
+			async.waterfall([
+				fetchNotification(agent),
+				(notifications, next) => {
+					notifications = filterByIssueClosed(notifications);
+					expect(notifications).to.be.an("array").and.to.have.length(0,"Shouldn't have closed issue notification");
+					next();
+				}
+			], done);
+		}
+
+		const createIssue = (modelId, name) => done => {
+			agents.teamSpace1.post(`/${account}/${modelId}/issues.json`)
+				.send({...issue, name})
+				.expect(200 , function(err, res) {
+						issuesId.push(res.body._id);
+						done();
+					});
+		}
+
+		const closeIssue = (model, id) => done =>
+			updateIssue(model,  Object.assign(issue, {status:'closed'}), id)(done);
+
+		const uncloseIssue = (model, id) => done =>
+			updateIssue(model,  Object.assign(issue, {status:'in progress'}), id)(done);
+
+		before(done => {
+			async.series([
+				deleteAllNotifications,
+				createIssue(model, "Closed issue with two roles assigned"),
+				createIssue(model, "Closed issue with one role assigned")
+			], done);
+		});
+
+		it("shouldn't have a closed issue notification",
+			testForNoClosedNotification('adminTeamspace1JobA')
+		);
+
+		const testForIssueX = (username, x) => done => {
+			const agent = agents[username];
+			async.waterfall([
+				fetchNotification(agent),
+				(notifications, next) => {
+					notifications = filterByIssueClosed(notifications);
+					expect(notifications).to.be.an("array").and.to.have.length(1,  "Should have one issue closed notification");
+					const notification = notifications[0];
+					expect(notification.issuesId).to.be.an("array").and.to.have.length(1, "Should have one issue id in closed notification");
+					expect(notification.issuesId[0]).to.equals(issuesId[x], "The issue closed notification should be of the id");
+					next();
+				}
+			], done);
+		}
+
+		const testForIssue0 = username => testForIssueX(username, 0);
+		const testForIssue1 = username => testForIssueX(username, 1);
+
+		describe("when a issue has been closed", () => {
+			before(done => {
+				console.log("only assign job C to " + issuesId[0]);
+
+				async.series([
+					updateIssue(model,
+								Object.assign({...issue, name:'updated issue'}, {"assigned_roles": ["jobC"]}),
+								issuesId[0]),  // assigns roles from jobB -> jobC
+					closeIssue(model, issuesId[0])
+				], done);
+			});
+
+			it("collaborator from first assigned role in issue should have a closed issue notification",
+				testForIssue0('collaboratorTeamspace1Model1JobB')
+			);
+
+			it("viewer from first assigned role in issue should not have a closed issue notification", 
+				testForNoClosedNotification("viewerTeamspace1Model1JobB")
+			);
+
+			it("collaborator from the second time a role has been assigned to an issue should have a closed issue notification",
+				testForIssue0('collaboratorTeamspace1Model1JobC')
+			);
+
+			it("viewer from the second time a role has been assing to an issue should not have a closed issue notification",
+				testForNoClosedNotification("viewerTeamspace1Model1JobC")
+			);
+
+			it("collaborator from a role that has never been assign to an issue should not have a closed issue notification",
+				testForNoClosedNotification("collaboratorTeamspace1Model1JobD")
+			);
+
+			it("the user that closed the issue shouldnt get a closed issue notification",
+				testForNoClosedNotification("teamSpace1")
+			);
+
+			it("the collaborator of owner's job should get a closed notification",
+				testForIssue0('collaboratorTeamspace1Model1JobA')
+			);
+
+			it("the commenter of owner's job should get a closed notification",
+				testForIssue0('commenterTeamspace1Model1JobA')
+			);
+
+			it("the viewer of owner's job should not get a closed notification",
+				testForNoClosedNotification('viewerTeamspace1Model1JobA')
+			);
+		});
+
+		describe("when two issues has been closed", () => {
+			const testForBothIssues = username => done => {
+				const agent = agents[username];
+				async.waterfall([
+					fetchNotification(agent),
+					(notifications, next) => {
+						notifications = filterByIssueClosed(notifications);
+						expect(notifications).to.be.an("array").and.to.have.length(1,  "Should have one issue closed notification");
+						const notification = notifications[0];
+						expect(notification.issuesId).to.be.an("array").and.to.have.length(2, "Should have two issues ids in closed notification");
+						expect(notification.issuesId.sort()).to.eql(issuesId.sort(), "The issues inside the issue closed notification should be the ones that got closed");
+						next();
+					}
+				], done);
+			}
+
+			before(done => {
+				closeIssue(model, issuesId[1])(done);
+			});
+
+			it("collaborator from first assigned role in issue should have a closed issue notification wth two issues ids",
+				testForBothIssues('collaboratorTeamspace1Model1JobB')
+			);
+
+			it("collaborator from the second time a role has been assign of the first issue should still have only one closed issue notification with one issue",
+				testForIssue0('collaboratorTeamspace1Model1JobC')
+			);
+		});
+
+		describe("when a issue has been 'unclosed'",() => {
+			before(done => {
+				console.log('unclose issue'+ issuesId[0]);
+
+				uncloseIssue(model, issuesId[0])(done);
+			})
+
+			it("collaborator from first assigned role in issue should have a closed issue notification wth the second issue id only",
+				testForIssue1('collaboratorTeamspace1Model1JobB')
+			);
+
+			it("collaborator from the second time a role has been assign of the first issue should not have closed notifications",
+				testForNoClosedNotification('collaboratorTeamspace1Model1JobC')
+			);
+		});
+	});
+
+	// ========================================
+	// Test suite for model update notification
+	// ========================================
 	describe("of type model update", ()=> {
 		before(bouncerHelper.startBouncerWorker);
 
