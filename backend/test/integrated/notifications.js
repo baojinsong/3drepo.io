@@ -16,6 +16,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+const { deleteNotifications, fetchNotification } = require("../helpers/notifications");
 const request = require("supertest");
 const bouncerHelper = require("../helpers/bouncerHelper");
 const expect = require("chai").expect;
@@ -82,17 +83,10 @@ describe('Notifications', function() {
 	const filterByIssueAssigned = n => n.filter(n => n.type == 'ISSUE_ASSIGNED');
 	const filterByIssueClosed = n => n.filter(n => n.type == 'ISSUE_CLOSED');
 
-	const deleteAllNotifications = next => {
+	const deleteAllNotifications = next =>
 		async.parallel(
-			usernames.map(username => next =>
-			{
-				const agent = agents[username];
-				agent.delete(NOTIFICATIONS_URL)
-					.expect(200, function(err, res) {
-						next(err);
-					});
-			}), next);
-	};
+			usernames.map(username => deleteNotifications(agents[username]))
+		,next);
 
 	before(function(done) {
 		server = app.listen(8080, function () {
@@ -123,14 +117,6 @@ describe('Notifications', function() {
 			done();
 		});
 	});
-
-	const fetchNotification = function(agent) {
-		return function() {
-			const next = arguments[arguments.length-1];
-
-			agent.get(NOTIFICATIONS_URL)
-				.expect(200, (err, res) => next(err, res.body));
-	}};
 
 	// ========================================
 	// Test suite for assign issue notification
