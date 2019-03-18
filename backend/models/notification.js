@@ -215,7 +215,7 @@ module.exports = {
 			}
 		}
 
-		const matchedUsers = await job.findUsersWithJobs(teamSpace, [...assignedRoles]);
+		const matchedUsers = await job.matchUserJobs(teamSpace, [...assignedRoles]);
 
 		// Leave out the current user , closing the issue.
 		const users = matchedUsers.filter(m => m !== username);
@@ -346,7 +346,7 @@ module.exports = {
 			}
 		}
 
-		const matchedUsers = await job.findUsersWithJobs(teamSpace, [...assignedRoles]);
+		const matchedUsers = await job.matchUserJobs(teamSpace, [...assignedRoles]);
 
 		// Leave out the current user , closing the issue.
 		const users = matchedUsers.filter(m => m !== username);
