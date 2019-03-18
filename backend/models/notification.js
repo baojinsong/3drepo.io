@@ -193,19 +193,17 @@ module.exports = {
 
 	},
 
-	upsertIssueClosedNotifications: async function (username, teamSpace, modelId, issue) {
+	findAssignedJobs : async function (issue) {
+		const comments = issue.comments;
 		const rolesKey = "assigned_roles";
 		const assignedRoles = new Set();
 
-		const comments = issue.comments;
-
-		// Add original owner role.
+		// Add the user who created the issue.
 		assignedRoles.add(issue.creator_role);
 
 		// Add current assigned role.
 		assignedRoles.add(issue.assigned_roles[0]);
 
-		// Possible function ....
 		for (const item in comments) {
 			const actionProperty = comments[item].action;
 			// Check for additional roles that have been assigned using the issue comments.
@@ -215,7 +213,15 @@ module.exports = {
 			}
 		}
 
-		const matchedUsers = await job.matchUserJobs(teamSpace, [...assignedRoles]);
+		return assignedRoles;
+
+	},
+
+	upsertIssueClosedNotifications: async function (username, teamSpace, modelId, issue) {
+
+		const assignedRoles = await this.findAssignedJobs(issue);
+
+		const matchedUsers = await job.findUsersWithJobs(teamSpace, [...assignedRoles]);
 
 		// Leave out the current user , closing the issue.
 		const users = matchedUsers.filter(m => m !== username);
@@ -325,28 +331,11 @@ module.exports = {
 			return Promise.resolve([]);
 		}
 
-		const rolesKey = "assigned_roles";
-		const assignedRoles = new Set();
-
-		const comments = issue.comments;
-
-		// Add original owner role.
-		assignedRoles.add(issue.creator_role);
-
-		// Add any additional roles.
-		assignedRoles.add(issue.assigned_roles[0]);
+		const assignedRoles = await this.findAssignedJobs(issue);
 
 		const issueType = types.ISSUE_CLOSED;
 
-		for (const item in comments) {
-			const actionProperty = comments[item].action;
-
-			if (actionProperty && actionProperty.property === rolesKey) {
-				assignedRoles.add(actionProperty.from);
-			}
-		}
-
-		const matchedUsers = await job.matchUserJobs(teamSpace, [...assignedRoles]);
+		const matchedUsers = await job.findUsersWithJobs(teamSpace, [...assignedRoles]);
 
 		// Leave out the current user , closing the issue.
 		const users = matchedUsers.filter(m => m !== username);
