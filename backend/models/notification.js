@@ -172,6 +172,16 @@ module.exports = {
 		}));
 	},
 
+	// BUG :returning authorised users,  but error on promise.
+	allowAccess: async function (users, teamSpace, modelId) {
+		return Promise.all(users.map(user => {
+			return hasWriteAccessToModelHelper(user, teamSpace, modelId)
+				.then((canWrite => {
+					return ({ user, canWrite });
+				}));
+		}));
+	},
+
 	removeUserNotification: async function (users, teamSpace, modelId, issueId, issueType) {
 		return Promise.all(
 			users.map(u => {
@@ -183,38 +193,39 @@ module.exports = {
 
 	},
 
-	upsertIssueClosedNotifications: async function (teamSpace, modelId, issue) {
+	upsertIssueClosedNotifications: async function (username, teamSpace, modelId, issue) {
 		const rolesKey = "assigned_roles";
-		const owner = issue.owner;
 		const assignedRoles = new Set();
 
 		const comments = issue.comments;
 
+		// Add original owner role.
+		assignedRoles.add(issue.creator_role);
+
+		// Add current assigned role.
+		assignedRoles.add(issue.assigned_roles[0]);
+
+		// Possible function ....
 		for (const item in comments) {
 			const actionProperty = comments[item].action;
+			// Check for additional roles that have been assigned using the issue comments.
 
-			// If no additional roles have been assigned ,
-			// make sure we add the current assigned role.
-			if (actionProperty && actionProperty.property !== rolesKey) {
-				assignedRoles.add(issue.assigned_roles);
-			}
-			// Check for additional roles that have been assigned
-			// using the issue comments.
-
-			// TODO: Add check for .property, should fix travis test fail
 			if (actionProperty && actionProperty.property === rolesKey) {
-				assignedRoles.add(actionProperty.to);
 				assignedRoles.add(actionProperty.from);
 			}
 		}
 
-		const usersJobs = await job.findByJobs(teamSpace, [...assignedRoles]);
+		const matchedUsers = await job.findUsersWithJobs(teamSpace, [...assignedRoles]);
 
-		if (usersJobs.indexOf(owner) === -1) {
-			usersJobs.push(owner);
-		}
+		// Leave out the current user , closing the issue.
+		const users = matchedUsers.filter(m => m !== username);
 
-		const createNotifications = await this.createUserNotification(usersJobs, teamSpace, modelId, issue._id);
+		// check access/permission
+		const authorisedUsers = await this.allowAccess(users, teamSpace, modelId);
+
+		const filteredAuthUsers = authorisedUsers.filter(u => u.canWrite).map(u => u.user);
+
+		const createNotifications = await this.createUserNotification(filteredAuthUsers, teamSpace, modelId, issue._id);
 
 		const addModelNameNotification = await fillModelNames(createNotifications.map(un => un.notification)).then(() => createNotifications);
 
@@ -309,41 +320,38 @@ module.exports = {
 		return notifications;
 	},
 
-	removeClosedNotifications : async function(teamSpace, modelId, issue) {
+	removeClosedNotifications : async function(username, teamSpace, modelId, issue) {
 		if (!issue) {
 			return Promise.resolve([]);
 		}
 
 		const rolesKey = "assigned_roles";
-		const owner = issue.owner;
-		const issueType = types.ISSUE_CLOSED;
-
-		const assignedRoles = [];
+		const assignedRoles = new Set();
 
 		const comments = issue.comments;
+
+		// Add original owner role.
+		assignedRoles.add(issue.creator_role);
+
+		// Add any additional roles.
+		assignedRoles.add(issue.assigned_roles[0]);
+
+		const issueType = types.ISSUE_CLOSED;
 
 		for (const item in comments) {
 			const actionProperty = comments[item].action;
 
-			if (actionProperty && actionProperty.property !== rolesKey) {
-				assignedRoles.push(issue.assigned_roles);
-			}
-
 			if (actionProperty && actionProperty.property === rolesKey) {
-				assignedRoles.push(actionProperty.to);
-				assignedRoles.push(actionProperty.from);
+				assignedRoles.add(actionProperty.from);
 			}
 		}
 
-		const getUserJobs = await job.findByJobs(teamSpace, assignedRoles);
+		const matchedUsers = await job.findUsersWithJobs(teamSpace, [...assignedRoles]);
 
-		// Make sure the issue owner is notified.
-		if (getUserJobs.indexOf(owner) === -1) {
-			getUserJobs.push(owner);
-		}
-
+		// Leave out the current user , closing the issue.
+		const users = matchedUsers.filter(m => m !== username);
 		// Filter the notifications, for each user to delete.
-		const filterRolesToNotifications = await this.removeUserNotification(getUserJobs, teamSpace, modelId, issue._id, issueType);
+		const filterRolesToNotifications = await this.removeUserNotification(users, teamSpace, modelId, issue._id, issueType);
 
 		// Fill model names for the deleted, issues/notifications.
 		const modelNameClosedNotifications = await fillModelNames(filterRolesToNotifications.map(un => un.notification)).then(() => filterRolesToNotifications);
