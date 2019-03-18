@@ -1,3 +1,5 @@
+"use strict";
+
 /**
  *  Copyright (C) 2018 3D Repo Ltd
  *
