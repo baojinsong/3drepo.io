@@ -74,7 +74,7 @@ describe("Chat service", function () {
 		agent.post(`/${account}/${model}/issues.json`)
 			.send(issue)
 			.expect(200 , function(err, res) {
-				if (next) next(res.body)
+				if (next) next(err, res.body)
 			});
 	};
 
@@ -352,11 +352,11 @@ describe("Chat service", function () {
 
 		describe("of issue assigned type", () => {
 
-			before(done => { deleteNotifications(teamSpace1Agent)(done); });
+			before(done => { deleteNotifications(agent)(done); });
 
 			it("should receive a new notification event when a issue has been created",
 				testForChatEvent(() => {
-					createIssue(teamSpace1Agent, jobAIssue)(iss => issueId = iss._id);
+					createIssue(teamSpace1Agent, jobAIssue)((err, iss) => issueId = iss._id);
 				},
 				notificationUpsertEvent,
 				(notifications, done) => {
@@ -373,7 +373,7 @@ describe("Chat service", function () {
 
 			it("should receive an upsert event when another issue of the same model has been assigned to the user",
 				testForChatEvent(() => {
-					createIssue(teamSpace1Agent, jobAIssue)(iss => issueId2 = iss._id);
+					createIssue(teamSpace1Agent, jobAIssue)((err, iss) => issueId2 = iss._id);
 				},
 				notificationUpsertEvent,
 				(notifications, done) => {
@@ -418,37 +418,40 @@ describe("Chat service", function () {
 
 		describe("of closed issue type", () => {
 			before(done => async.waterfall([
-				deleteNotifications(teamSpace1Agent),
+				deleteNotifications(agent),
 				createIssue(teamSpace1Agent, jobAIssue),
-				iss => { issueId = iss._id; next();},
+				(iss,next) => { issueId = iss._id; next();},
 				createIssue(teamSpace1Agent, jobAIssue),
-				iss => { issueId2 = iss._id; next();},
+				(iss,next) => { issueId2 = iss._id; next();},
 			], () => done()));
 
 			it("should receive a new notification event when a issue has been closed",
-			testForChatEvent(() => {
-				updateIssue(teamSpace1Agent,issueId ,{status:'closed'})();
-			}),
-			notificationUpsertEvent,
-			debounce((notifications, done) => {
-				notifications =  filterByIssueClosed(notifications);
-				expect(notifications).to.have.length(1,'Should have receive a ISSUE_CLOSED');
-				expect(notification[0].issuesId).to.eql([issueId]);
-				done();
-			},200));
-
+				testForChatEvent(() => {
+					updateIssue(teamSpace1Agent,issueId ,{status:'closed'})();
+				},
+				notificationUpsertEvent,
+				debounce((notifications, done) => {
+					notifications =  filterByIssueClosed(notifications);
+					expect(notifications).to.have.length(1,'Should have receive a ISSUE_CLOSED');
+					expect(notifications[0].issuesId).to.eql([issueId]);
+					done();
+				},200))
+			);
 
 			it("should receive a upsert notification event when a another issue has been closed, with the two issues in the issues_id property set",
-			testForChatEvent(() => {
-				updateIssue(teamSpace1Agent,issueId2 ,{status:'closed'})();
-			}),
-			notificationUpsertEvent,
-			debounce((notifications, done) => {
-				notifications =  filterByIssueClosed(notifications);
-				expect(notifications).to.have.length(1,'Should have receive a ISSUE_CLOSED');
-				expect(notification[0].issuesId.sort()).to.eql([issueId, issueId2].sort());
-				done();
-			},200));
+				testForChatEvent(
+					() => {
+						updateIssue(teamSpace1Agent,issueId2 ,{status:'closed'})();
+					},
+					notificationUpsertEvent,
+					debounce((notifications, done) => {
+						notifications =  filterByIssueClosed(notifications);
+						expect(notifications).to.have.length(1,'Should have receive a ISSUE_CLOSED');
+						expect(notifications[0].issuesId.sort()).to.eql([issueId, issueId2].sort());
+						done();
+					},200)
+				)
+			);
 
 		});
 
