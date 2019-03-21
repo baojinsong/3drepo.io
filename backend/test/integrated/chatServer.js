@@ -434,6 +434,7 @@ describe("Chat service", function () {
 					notifications =  filterByIssueClosed(notifications);
 					expect(notifications).to.have.length(1,'Should have receive a ISSUE_CLOSED');
 					expect(notifications[0].issuesId).to.eql([issueId]);
+					notificationId = notifications[0]._id;
 					done();
 				},200))
 			);
@@ -448,6 +449,34 @@ describe("Chat service", function () {
 						notifications =  filterByIssueClosed(notifications);
 						expect(notifications).to.have.length(1,'Should have receive a ISSUE_CLOSED');
 						expect(notifications[0].issuesId.sort()).to.eql([issueId, issueId2].sort());
+						done();
+					},200)
+				)
+			);
+
+			it("should receive a upsert notification event when a another issue has been 'unclosed', with the one issues in the issues_id property set",
+				testForChatEvent(
+					() => {
+						updateIssue(teamSpace1Agent,issueId2 ,{status:'open'})();
+					},
+					notificationUpsertEvent,
+					debounce((notifications, done) => {
+						notifications =  filterByIssueClosed(notifications);
+						expect(notifications).to.have.length(1,'Should have receive a ISSUE_CLOSED');
+						expect(notifications[0].issuesId).to.eql([issueId]);
+						done();
+					},200)
+				)
+			);
+
+			it("should receive a delete notification event when a both issues has been 'unclosed'",
+				testForChatEvent(
+					() => {
+						updateIssue(teamSpace1Agent,issueId ,{status:'open'})();
+					},
+					notificationDeleteEvent,
+					debounce((notifications, done) => {
+						expect(notifications[0]._id).to.eql(notificationId);
 						done();
 					},200)
 				)
