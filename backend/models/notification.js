@@ -225,11 +225,19 @@ module.exports = {
 
 		const matchedUsers = await job.findUsersWithJobs(teamSpace, [...assignedRoles]);
 
-		// Remove current user, that is closing the issue.
-		matchedUsers.splice(matchedUsers.indexOf(username), 1);
+		const users = matchedUsers.array.forEach((user) => {
+			if(!username === user) {
+				return hasWriteAccessToModelHelper(user, teamSpace, modelId)
+					.then((canWrite => {
+						const accessUsers = { user, canWrite };
+						if (accessUsers.canWrite) {
+							return accessUsers.user;
+						}
+					})
+			}		
+		});
 
-		// check access/permission
-		const users = await this.allowAccess(matchedUsers, teamSpace, modelId);
+		console.log(users);
 
 		const createNotifications = await this.createUserNotification(users, teamSpace, modelId, issue._id);
 
