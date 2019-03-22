@@ -172,7 +172,6 @@ module.exports = {
 		}));
 	},
 
-	// BUG :returning authorised users,  but error on promise.
 	allowAccess: async function (users, teamSpace, modelId) {
 		return Promise.all(users.map(user => {
 			return hasWriteAccessToModelHelper(user, teamSpace, modelId)
