@@ -176,7 +176,10 @@ module.exports = {
 		return Promise.all(users.map(user => {
 			return hasWriteAccessToModelHelper(user, teamSpace, modelId)
 				.then((canWrite => {
-					return ({ user, canWrite });
+					const accessUsers = {user, canWrite};
+					if (accessUsers.canWrite) {
+						return accessUsers.user;
+					}
 				}));
 		}));
 	},
@@ -222,15 +225,13 @@ module.exports = {
 
 		const matchedUsers = await job.findUsersWithJobs(teamSpace, [...assignedRoles]);
 
-		// Leave out the current user , closing the issue.
-		const users = matchedUsers.filter(m => m !== username);
+		// Remove current user, that is closing the issue.
+		matchedUsers.splice(matchedUsers.indexOf(username), 1);
 
 		// check access/permission
-		const authorisedUsers = await this.allowAccess(users, teamSpace, modelId);
+		const users = await this.allowAccess(matchedUsers, teamSpace, modelId);
 
-		const filteredAuthUsers = authorisedUsers.filter(u => u.canWrite).map(u => u.user);
-
-		const createNotifications = await this.createUserNotification(filteredAuthUsers, teamSpace, modelId, issue._id);
+		const createNotifications = await this.createUserNotification(users, teamSpace, modelId, issue._id);
 
 		const addModelNameNotification = await fillModelNames(createNotifications.map(un => un.notification)).then(() => createNotifications);
 
