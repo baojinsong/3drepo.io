@@ -1226,11 +1226,7 @@ schema.statics.isIssueBeingClosed = function(oldIssue, newIssue) {
 };
 
 schema.statics.isIssueBeingReopened = function (oldIssue, newIssue) {
-	if (!oldIssue) {
-		return false;
-	}
-
-	return oldIssue.status === "closed" && newIssue.status !== "closed";
+	return oldIssue && oldIssue.status === "closed" && newIssue.status !== "closed";
 };
 
 schema.methods.getBCFMarkup = function(account, model, unit) {
