@@ -220,24 +220,27 @@ module.exports = {
 	},
 
 	upsertIssueClosedNotifications: async function (username, teamSpace, modelId, issue) {
+		const users = [];
 
 		const assignedRoles = await this.findAssignedJobs(issue);
 
 		const matchedUsers = await job.findUsersWithJobs(teamSpace, [...assignedRoles]);
 
-		const users = matchedUsers.array.forEach((user) => {
-			if(!username === user) {
-				return hasWriteAccessToModelHelper(user, teamSpace, modelId)
-					.then((canWrite => {
-						const accessUsers = { user, canWrite };
-						if (accessUsers.canWrite) {
-							return accessUsers.user;
+		matchedUsers.forEach((user) => {
+			if (user !== username) {
+				return hasReadAccessToModelHelper(user, teamSpace, modelId)
+					.then((canWrite) => {
+						const accessUsers = {user, canWrite};
+						if(accessUsers.canWrite) {
+							users.push(accessUsers.user);
+							console.log("inside promise IF statement", users);
 						}
-					})
-			}		
+					});
+			}
+			console.log("outside promise", users);
+			return users;
 		});
-
-		console.log(users);
+		console.log("outside forach", users);
 
 		const createNotifications = await this.createUserNotification(users, teamSpace, modelId, issue._id);
 
