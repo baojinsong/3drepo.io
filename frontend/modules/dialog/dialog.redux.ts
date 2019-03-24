@@ -17,8 +17,8 @@
 
 import { createActions, createReducer } from 'reduxsauce';
 import { get, omit } from 'lodash';
-import { ErrorDialog, ConfirmDialog } from '../../routes/components/dialogContainer/components';
 import { ScreenshotDialog } from '../../routes/components/screenshotDialog/screenshotDialog.component';
+import { ErrorDialog, ConfirmDialog } from '../../routes/components/dialogContainer/components';
 
 interface IDialogConfig {
 	title: string;
@@ -37,7 +37,7 @@ export const { Types: DialogTypes, Creators: DialogActions } = createActions({
 	hideDialog: [],
 	setPendingState: ['isPending'],
 	showScreenshotDialog: ['config']
-}, { prefix: 'DIALOG_' });
+}, { prefix: 'DIALOG/' });
 
 export const INITIAL_STATE = {
 	isOpen: false,
