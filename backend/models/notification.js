@@ -56,7 +56,7 @@ const extractTeamSpaceInfo = function (notifications) {
 	return _.mapValues(_.groupBy(notifications, "teamSpace"), (notification) => _.map(notification, v => v.modelId));
 };
 
-const fillModelNames = function (notifications) {
+const addModelNames = function (notifications) {
 	const teamSpaces = extractTeamSpaceInfo(notifications);
 	return modelSettings.getModelsName(teamSpaces).then((modelsData) => { // fills out the models name with data from the database
 		return notifications.map(notification => {
@@ -235,21 +235,26 @@ module.exports = {
 		const matchedUsers = await job.findUsersWithJobs(teamSpace, [...assignedRoles]);
 
 		const users = [];
+		const getUserPromises = [];
 
-		matchedUsers.forEach((user) => {
-			// filters out the username.
+		for(const user of matchedUsers) {
 			if(user !== username) {
-				users.push(user);
+				getUserPromises.push(hasWriteAccessToModelHelper(user, teamSpace, modelId).then((canWrite) => {
+					const authUsers = { user, canWrite };
+					if (authUsers.canWrite) {
+						users.push(authUsers.user);
+					}
+				}));
 			}
-		});
+		}
 
-		const authUsers = await this.allowAccess(users, teamSpace, modelId);
+		await Promise.all(getUserPromises);
 
-		const createNotifications = await this.createUserNotification(authUsers, teamSpace, modelId, issue._id);
+		const createNotifications = await this.createUserNotification(users, teamSpace, modelId, issue._id);
 
-		const addModelNameNotification = await fillModelNames(createNotifications.map(un => un.notification)).then(() => createNotifications);
+		const notifiWithModelNames = await addModelNames(createNotifications.map(un => un.notification)).then(() => createNotifications);
 
-		return addModelNameNotification;
+		return notifiWithModelNames;
 	},
 
 	/**
@@ -289,7 +294,7 @@ module.exports = {
 					assignedUsers.map(u => this.upsertIssueAssignedNotification(u, teamSpace, modelId, issue._id)
 						.then(n => ({ username: u, notification: n })))
 				).then(usersNotifications => {
-					return fillModelNames(usersNotifications.map(un => un.notification)).then(() => usersNotifications);
+					return addModelNames(usersNotifications.map(un => un.notification)).then(() => usersNotifications);
 				});
 			});
 	},
@@ -318,7 +323,7 @@ module.exports = {
 			return ({ username, notification });
 		}));
 
-		await fillModelNames(notifications.map(un => un.notification));
+		await addModelNames(notifications.map(un => un.notification));
 
 		return notifications;
 	},
@@ -336,7 +341,7 @@ module.exports = {
 		const data = { teamSpace, modelId, errorMessage };
 		const notification = await this.insertNotification(username, types.MODEL_UPDATED_FAILED, data);
 		const notifications = [{ username, notification }];
-		await fillModelNames([notification]);
+		await addModelNames([notification]);
 		return notifications;
 	},
 
@@ -357,7 +362,7 @@ module.exports = {
 		const filterRolesToNotifications = await this.removeUserNotification(users, teamSpace, modelId, issue._id, issueType);
 
 		// Fill model names for the deleted, issues/notifications.
-		const modelNameClosedNotifications = await fillModelNames(filterRolesToNotifications.map(un => un.notification)).then(() => filterRolesToNotifications);
+		const modelNameClosedNotifications = await addModelNames(filterRolesToNotifications.map(un => un.notification)).then(() => filterRolesToNotifications);
 
 		return modelNameClosedNotifications;
 
@@ -386,7 +391,7 @@ module.exports = {
 						Object.assign({ username: u }, n))))
 					.then(notifications => notifications.reduce((a, c) => !c.notification ? a : a.concat(c), []))
 					.then(usersNotifications => {
-						return fillModelNames(usersNotifications.map(un => un.notification)).then(() => usersNotifications);
+						return addModelNames(usersNotifications.map(un => un.notification)).then(() => usersNotifications);
 					});
 			});
 	},
@@ -403,6 +408,6 @@ module.exports = {
 		}
 
 		return db.getCollection(NOTIFICATIONS_DB, username).then((collection) => collection.find(criteria, { sort: { timestamp: -1 } }).toArray())
-			.then(fillModelNames);
+			.then(addModelNames);
 	}
 };
