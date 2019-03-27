@@ -1108,12 +1108,6 @@ schema.methods.updateAttrs = function(data, isAdmin, hasOwnerJob, hasAssignedJob
 	});
 };
 
-// schema.methods.findSystemMessageRoles = function(issues) {
-// 	return issues.forEach(issue => {
-// 		console.log(issue);
-// 	})
-// }
-
 schema.methods.clean = function(typePrefix, modelCode) {
 
 	const cleaned = this.toObject();
