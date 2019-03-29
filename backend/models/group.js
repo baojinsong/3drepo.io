@@ -553,7 +553,7 @@ groupSchema.statics.createGroup = function (dbCol, sessionId, data, creator = ""
 				savedGroup._id = utils.uuidToString(savedGroup._id);
 				return getObjectIds(dbCol, savedGroup, branch, rid, true, false).then((objects) => {
 					savedGroup.objects = objects;
-					if (!data.isIssueGroup && sessionId) {
+					if (!data.isIssueGroup && !data.isRiskGroup && sessionId) {
 						ChatEvent.newGroups(sessionId, dbCol.account, model, savedGroup);
 					}
 					return savedGroup;
@@ -758,7 +758,7 @@ function findModelSharedIDsByQuery(account, model, query, branch, revId) {
 						for(let i = 0; i < parents.length; i = i + entryPerQuery) {
 							const endIndex = i + entryPerQuery < parents.length ? i + entryPerQuery : parents.length;
 							const parentsForQuery = parents.slice(i, endIndex);
-							const meshQuery = { _id: { $in: history.current }, shared_id: { $in: parentsForQuery }};
+							const meshQuery = { _id: { $in: history.current }, shared_id: { $in: parentsForQuery }, type : "mesh"};
 							const meshProject = { shared_id: 1, _id: 0 };
 							queryPromise.push(dbCol.find(meshQuery, meshProject).toArray());
 						}
