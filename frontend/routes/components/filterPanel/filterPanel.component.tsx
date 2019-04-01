@@ -56,7 +56,7 @@ interface IFilter {
 	type?: number;
 }
 
-interface ISelectedFilter {
+export interface ISelectedFilter {
 	value: any;
 	label: string;
 	relatedField: string;
