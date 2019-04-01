@@ -68,6 +68,8 @@ interface IProps {
 	onChange: (selectedFilters) => void;
 	selectedFilters: any[];
 	hideMenu?: boolean;
+	placeholder?: string;
+	className?: string;
 }
 
 interface IState {
@@ -114,7 +116,8 @@ export class FilterPanel extends React.PureComponent<IProps, IState> {
 	};
 
 	public static defaultProps = {
-		filters: []
+		filters: [],
+		placeholder: 'Filter'
 	};
 
 	private popperNode = null;
@@ -396,9 +399,11 @@ export class FilterPanel extends React.PureComponent<IProps, IState> {
 	public render() {
 		const { value, suggestions } = this.state;
 		return (
-			<Container filtersOpen={this.state.selectedFilters.length && this.state.filtersOpen}>
+			<Container
+				filtersOpen={this.state.selectedFilters.length && this.state.filtersOpen}
+				className={this.props.className}
+			>
 				{this.renderSelectedFilters()}
-
 				<InputContainer menuHidden={this.props.hideMenu}>
 					<Autosuggest
 						ref={this.handleAutoSuggestMount}
@@ -409,7 +414,7 @@ export class FilterPanel extends React.PureComponent<IProps, IState> {
 						renderSuggestion={this.renderSuggestion}
 						renderInputComponent={this.renderInputComponent}
 						inputProps={{
-							placeholder: 'Filter',
+							placeholder: this.props.placeholder,
 							value,
 							onChange: this.onSearchChange,
 							onKeyPress: this.onSearchSubmit,
