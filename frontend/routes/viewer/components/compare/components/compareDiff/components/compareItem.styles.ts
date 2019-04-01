@@ -15,18 +15,35 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as React from 'react';
-import FontAwesomeIconComponent from './fontAwesomeIcon.component';
+import styled from 'styled-components';
+import { COLOR } from '../../../../../../../styles';
 
-export const FontAwesomeIcon = FontAwesomeIconComponent;
+export const Container = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid ${COLOR.GRAY};
+`;
 
-// Before add new icon's component, add required fa icon to library in "services/fontAwesome"
-export const Eraser = (props) => <FontAwesomeIconComponent {...props} icon="eraser" />;
+export const ModelData = styled.div`
+  display: flex;
+  flex-direction: column;
+  margin-left: 10px;
+`;
 
-export const Eye = (props) => <FontAwesomeIconComponent {...props} icon="eye" />;
+export const Name = styled.div`
+  color: #4D4D4D;
+  font-size: 14px;
+  margin-bottom: 10px;
+`;
 
-export const Tint = (props) => <FontAwesomeIconComponent {...props} icon="tint" />;
+export const CurrentRevision = styled.div`
+  color: #757575;
+  font-size: 14px;
+`;
 
-export const HandPaper = (props) => <FontAwesomeIconComponent {...props} icon="hand-paper" />;
-
-export const ArrowsAltH = (props) => <FontAwesomeIconComponent {...props} icon="arrows-alt-h" />;
+export const Revisions = styled.div`
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+`;
