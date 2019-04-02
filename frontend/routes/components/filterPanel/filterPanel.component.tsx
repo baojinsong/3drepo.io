@@ -70,6 +70,7 @@ interface IProps {
 	hideMenu?: boolean;
 	placeholder?: string;
 	className?: string;
+	autoFocus?: boolean;
 }
 
 interface IState {
@@ -117,7 +118,8 @@ export class FilterPanel extends React.PureComponent<IProps, IState> {
 
 	public static defaultProps = {
 		filters: [],
-		placeholder: 'Filter'
+		placeholder: 'Filter',
+		autoFocus: true
 	};
 
 	private popperNode = null;
@@ -237,7 +239,7 @@ export class FilterPanel extends React.PureComponent<IProps, IState> {
 
 		return (
 			<StyledTextField
-				autoFocus
+				autoFocus={this.props.autoFocus}
 				onPaste={this.handlePaste}
 				fullWidth
 				InputProps={{
