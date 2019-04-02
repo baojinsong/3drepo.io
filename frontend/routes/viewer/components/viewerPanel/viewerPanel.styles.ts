@@ -20,6 +20,11 @@ import { COLOR } from '../../../../styles/colors';
 import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
 
+interface IViewerPanelContent {
+	isPadding?: boolean;
+	scrollDisabled?: boolean;
+}
+
 export const TitleContainer = styled.div`
 	display: flex;
 	justify-content: space-between;
@@ -58,12 +63,16 @@ export const TitleIcon = styled.div`
 	justify-content: center;
 `;
 
-export const ViewerPanelContent = styled.div`
+export const ViewerPanelContent = styled.div<IViewerPanelContent>`
 	background-color: ${COLOR.WHITE_87};
-	padding: ${(props: any) => props.isPadding ? '24px' : '0'};
-	overflow: auto;
+	padding: ${(props) => props.isPadding ? '24px' : '0'};
+
+	overflow: ${(props) => props.scrollDisabled ? 'hidden' : 'auto'};
+	display: ${(props) => props.scrollDisabled ? 'flex' : 'block'};
+	flex-direction: ${(props) => props.scrollDisabled ? 'column' : 'unset'};
+
 	position: relative;
-` as any;
+`;
 
 export const ViewerPanelFooter = styled(Grid).attrs({
 	direction: 'row',

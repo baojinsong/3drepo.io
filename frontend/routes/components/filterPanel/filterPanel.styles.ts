@@ -23,32 +23,45 @@ import Chip from '@material-ui/core/Chip';
 import IconButton from '@material-ui/core/IconButton';
 import MoreIcon from '@material-ui/icons/MoreVert';
 
-export const Container = styled.div`
+interface IContainer {
+	filtersOpen: boolean;
+}
+
+interface ISelectedFilters {
+	empty: boolean;
+	filtersOpen: boolean;
+}
+
+interface IInputContainer {
+	menuHidden: boolean;
+}
+
+export const Container = styled.div<IContainer>`
   background-color: ${COLOR.WHITE};
 	position: relative;
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
-	height: ${(props: any) => props.filtersOpen ? '45px' : 'auto'};
+	height: ${(props) => props.filtersOpen ? '45px' : 'auto'};
 	flex: none;
-` as any;
+`;
 
-export const SelectedFilters = styled.div`
+export const SelectedFilters = styled.div<ISelectedFilters>`
   display: flex;
   flex-wrap: wrap;
 	padding: 4px 40px 0 8px;
-	overflow: ${(props: any) => props.filtersOpen ? 'hidden' : 'auto'};
-	min-height: ${(props: any) => props.empty ? '0' : '45px'};
+	overflow: ${(props) => props.filtersOpen ? 'hidden' : 'auto'};
+	min-height: ${(props) => props.empty ? '0' : '45px'};
 	position: relative;
 	max-height: 240px;
-` as any;
+`;
 
-export const InputContainer = styled.div`
+export const InputContainer = styled.div<IInputContainer>`
   display: block;
 	justify-content: flex-end;
 	position: relative;
 	margin: 0;
-	min-height: ${(props: any) => props.menuHidden ? `52px` : '0'};
+	min-height: ${(props) => props.menuHidden ? `52px` : '0'};
 
   .react-autosuggest__container {
 		height: 100%;
@@ -69,7 +82,7 @@ export const InputContainer = styled.div`
 			}
 		}
   }
-` as any;
+`;
 
 export const SuggestionsList = styled(Popper)`
 	z-index: 1;
@@ -152,4 +165,8 @@ export const StyledMoreIcon = styled(MoreIcon)`
 export const ButtonWrapper = styled.div`
   position: relative;
 	height: 50px;
+`;
+
+export const Chips = styled.div`
+  position: relative;
 `;

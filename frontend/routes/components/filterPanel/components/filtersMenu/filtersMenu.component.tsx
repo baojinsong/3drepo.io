@@ -64,10 +64,6 @@ export class FiltersMenu extends React.PureComponent<IProps, IState> {
 
 	public parentRef = React.createRef<HTMLElement>();
 
-	public componentDidMount() {
-		const dateFilter = this.props.items.find((filter) => filter.type === DATA_TYPES.DATE);
-	}
-
 	public showSubMenu = (e) => {
 		this.setState({ activeItem: e });
 	}

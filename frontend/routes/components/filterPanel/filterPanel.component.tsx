@@ -39,7 +39,8 @@ import {
 	ButtonContainer,
 	StyledIconButton,
 	StyledMoreIcon,
-	ButtonWrapper
+	ButtonWrapper,
+	Chips
 } from './filterPanel.styles';
 import { compareStrings } from '../../../helpers/searching';
 import { renderWhenTrue } from '../../../helpers/rendering';
@@ -354,6 +355,7 @@ export class FilterPanel extends React.PureComponent<IProps, IState> {
 		>
 			{this.state.selectedFilters.length ? this.renderFilterButton() : null}
 
+			<Chips>
 			{this.state.selectedFilters.map(
 				(filter, index) => (
 					<StyledChip
@@ -364,6 +366,7 @@ export class FilterPanel extends React.PureComponent<IProps, IState> {
 				)
 			)
 			}
+			</Chips>
 		</SelectedFilters>
 	)
 
