@@ -355,7 +355,8 @@ export class FilterPanel extends React.PureComponent<IProps, IState> {
 		>
 			{this.state.selectedFilters.length ? this.renderFilterButton() : null}
 
-			<Chips>
+			<Chips
+				filtersOpen={this.state.selectedFilters.length && this.state.filtersOpen} className={this.props.className}>
 			{this.state.selectedFilters.map(
 				(filter, index) => (
 					<StyledChip
