@@ -663,6 +663,36 @@ issue.updateAttrs = function(dbCol, uid, data) {
 							);
 						}
 
+						if (this.isIssueBeingClosed(data, newIssue)) {
+							notificationPromises.push(
+								Notification.removeAssignedNotifications(
+									data.owner,
+									dbCol.account,
+									dbCol.model,
+									data
+								)
+							);
+							notificationPromises.push(
+								Notification.upsertIssueClosedNotifications(
+									data.owner,
+									dbCol.account,
+									dbCol.model,
+									newIssue
+								)
+							);
+						}
+
+						if (this.isIssueBeingReopened(data, newIssue)) {
+							notificationPromises.push(
+								Notification.removeClosedNotifications(
+									data.owner,
+									dbCol.account,
+									dbCol.model,
+									newIssue
+								)
+							);
+						}
+
 						toUpdate.status = data.status;
 						newIssue.status = data.status;
 					} else {
@@ -965,11 +995,11 @@ issue.getThumbnail = function(dbCol, uid) {
 };
 
 issue.isIssueBeingClosed = function(oldIssue, newIssue) {
-	return !!oldIssue && oldIssue.status !== "closed" && newIssue.status === "closed";
+	return !!oldIssue && oldIssue.status === "closed" && newIssue.status !== "closed";
 };
 
 issue.isIssueBeingReopened = function (oldIssue, newIssue) {
-	return oldIssue && oldIssue.status === "closed" && newIssue.status !== "closed";
+	return !!oldIssue && oldIssue.status !== "closed" && newIssue.status === "closed";
 };
 
 issue.isIssueAssignment = function(oldIssue, newIssue) {
